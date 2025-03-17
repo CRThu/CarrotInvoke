@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifndef DYNAMIC_POOL_H
-#define DYNAMIC_POOL_H
+#ifndef _DYNAMIC_POOL_H_
+#define _DYNAMIC_POOL_H_
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
@@ -101,4 +101,4 @@ extern "C"
 }
 #endif
 
-#endif /* DYNAMIC_POOL_H */
+#endif /* _DYNAMIC_POOL_H_ */

@@ -4,8 +4,8 @@
 * 2024.09.04
 *****************************/
 #pragma once
-#ifndef CMD_PARSE_H
-#define CMD_PARSE_H
+#ifndef _CMD_PARSE_H_
+#define _CMD_PARSE_H_
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
@@ -39,4 +39,4 @@ extern "C"
 }
 #endif
 
-#endif /* CMD_PARSE_H */
+#endif /* _CMD_PARSE_H_ */

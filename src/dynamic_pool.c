@@ -1,5 +1,4 @@
 #include "../Inc/dynamic_pool.h"
-
 /// <summary>
 /// 初始化动态类型数组
 /// </summary>

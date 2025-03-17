@@ -4,21 +4,22 @@
 * 2024.09.04
 *****************************/
 #pragma once
-#include <inttypes.h>
-#include <stdio.h>
-#include "../Inc/dynamic_pool.h"
-
-#ifndef DYNAMIC_CALL_H
-#define DYNAMIC_CALL_H
-
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif // !_CRT_SECURE_NO_WARNINGS
+#ifndef _DYNAMIC_CALL_H_
+#define _DYNAMIC_CALL_H_
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif // !_CRT_SECURE_NO_WARNINGS
+
+
+#include <inttypes.h>
+#include <stdio.h>
+#include "../Inc/dynamic_pool.h"
 
 #define DYNAMIC_CALL_VERSION		"1.0.2"
 
@@ -70,4 +71,4 @@ extern "C"
 }
 #endif
 
-#endif /* DYNAMIC_CALL_H */
+#endif /* _DYNAMIC_CALL_H_ */
