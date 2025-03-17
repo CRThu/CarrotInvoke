@@ -27,35 +27,50 @@ extern "C"
 #define DYNAMIC_POOL_MAX_PARAMS 256
 
     // DYNAMIC TYPES IS VALUE OR POINTER
-#define DTYPES_STORE_VAL            (0x00 << 7)
-#define DTYPES_STORE_REF            (0x01 << 7)
-#define DTYPES_STORE_REF_MASK       (0x01 << 7)
+#define DTYPES_BITS_OFFSET          (7)
+#define DTYPES_STORE_REF_MASK       (0x01 << DTYPES_BITS_OFFSET)
+#define DTYPES_STORE_VAL            (0x00 << DTYPES_BITS_OFFSET)
+#define DTYPES_STORE_REF            (0x01 << DTYPES_BITS_OFFSET)
 #define DTYPES_IS_REF(x)            (((x) & DTYPES_STORE_REF_MASK) == DTYPES_STORE_REF)
 
 // DYNAMIC TYPES LENGTH
-#define DTYPES_STORE_LEN_1B         (0x00 << 5)
-#define DTYPES_STORE_LEN_8B         (0x01 << 5)
-#define DTYPES_STORE_LEN_RESERVED   (0x02 << 5)
-#define DTYPES_STORE_LEN_PTR        (0x03 << 5)
-#define DTYPES_STORE_LEN_MASK       (0x03 << 5)
+#define DTYPES_STORE_LEN_OFFSET     (5)
+#define DTYPES_STORE_LEN_MASK       (0x03 << DTYPES_STORE_LEN_OFFSET)
+#define DTYPES_STORE_LEN_1B         (0x00 << DTYPES_STORE_LEN_OFFSET)
+#define DTYPES_STORE_LEN_8B         (0x01 << DTYPES_STORE_LEN_OFFSET)
+#define DTYPES_STORE_LEN_RESERVED   (0x02 << DTYPES_STORE_LEN_OFFSET)
+#define DTYPES_STORE_LEN_PTR        (0x03 << DTYPES_STORE_LEN_OFFSET)
 #define DTYPES_GET_LEN(x)           ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_1B) ? 1 \
                                         : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_8B) ? 8 \
-                                            : 0))
+                                            : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_RESERVED) ? -1 \
+                                                : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_PTR) ? 0 \
+                                                    : -1))))
 // DYNAMIC CALLS PARAMS DATATYPES
-#define DTYPES_STORE_NULL           (0x00 << 0)
-#define DTYPES_STORE_DEC64          (0x01 << 0)
-#define DTYPES_STORE_HEX64          (0x02 << 0)
-#define DTYPES_STORE_STRING         (0x03 << 0)
-#define DTYPES_STORE_ENUM           (0x04 << 0)
-#define DTYPES_STORE_BYTES          (0x05 << 0)
-#define DTYPES_STORE_JSON           (0x06 << 0)
-#define DTYPES_STORE_DTYPE_MASK     (0x1F << 0)
+#define DTYPES_STORE_DTYPE_OFFSET   (0)
+#define DTYPES_STORE_DTYPE_MASK     (0x1F << DTYPES_STORE_DTYPE_OFFSET)
+#define DTYPES_STORE_NULL           (0x00 << DTYPES_STORE_DTYPE_OFFSET)
+#define DTYPES_STORE_DEC64          (0x01 << DTYPES_STORE_DTYPE_OFFSET)
+#define DTYPES_STORE_HEX64          (0x02 << DTYPES_STORE_DTYPE_OFFSET)
+#define DTYPES_STORE_STRING         (0x03 << DTYPES_STORE_DTYPE_OFFSET)
+#define DTYPES_STORE_KV             (0x04 << DTYPES_STORE_DTYPE_OFFSET)
+#define DTYPES_STORE_BYTES          (0x05 << DTYPES_STORE_DTYPE_OFFSET)
+#define DTYPES_STORE_JSON           (0x06 << DTYPES_STORE_DTYPE_OFFSET)
 
+/*
+    TYPES       REPRESENT                   EQUALS TYPE
+    |- NULL     NULL/VOID/PLACEHOLDER       VOID/NULL/0
+    |- DEC64    DECIMAL NUMBERS             uint8_t/int8_t/uint16_t/int16_t/uint32_t/int32_t/int64_t
+    |- HEX64    HEXADECIMAL NUMBERS         uint8_t/uint16_t/uint32_t/uint64_t
+    |- KV       VALUES MATCHED BY KEYS      uint8_t/int8_t/uint16_t/int16_t/uint32_t/int32_t/int64_t
+    |- STRING   ASCII STRING                char*
+    |- BYTES    BYTE ARRAY                  uint8_t*
+    |- JSON     JSON OBJECT                 json_t*
+*/
 #define T_NULL                      (DTYPES_STORE_VAL | DTYPES_STORE_LEN_1B | DTYPES_STORE_NULL)
 #define T_DEC64                     (DTYPES_STORE_VAL | DTYPES_STORE_LEN_8B | DTYPES_STORE_DEC64)
 #define T_HEX64                     (DTYPES_STORE_VAL | DTYPES_STORE_LEN_8B | DTYPES_STORE_HEX64)
+#define T_KV                        (DTYPES_STORE_VAL | DTYPES_STORE_LEN_8B | DTYPES_STORE_KV)
 #define T_STRING                    (DTYPES_STORE_REF | DTYPES_STORE_LEN_PTR | DTYPES_STORE_STRING)
-#define T_ENUM                      (DTYPES_STORE_VAL | DTYPES_STORE_LEN_8B | DTYPES_STORE_ENUM)
 #define T_BYTES                     (DTYPES_STORE_REF | DTYPES_STORE_LEN_PTR | DTYPES_STORE_BYTES)
 #define T_JSON                      (DTYPES_STORE_REF | DTYPES_STORE_LEN_PTR | DTYPES_STORE_JSON)
 

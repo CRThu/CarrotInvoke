@@ -1,6 +1,7 @@
 #include "func.h"
 #include "../inc/dynamic_pool.h"
 #include "../inc/dynamic_call.h"
+#include "../inc/cmd_parse.h"
 
 
 void parse_test(dynamic_pool_t* pool)

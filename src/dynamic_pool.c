@@ -124,7 +124,7 @@ const char* enum_to_string(dtypes_t type)
     case T_DEC64: return "T_DEC64";
     case T_HEX64: return "T_HEX64";
     case T_STRING: return "T_STRING";
-    case T_ENUM: return "T_ENUM";
+    case T_KV: return "T_KV";
     case T_BYTES: return "T_BYTES";
     default: return "UNKNOWN";
     }
@@ -136,7 +136,7 @@ dtypes_t string_to_enum(const char* str)
     if (strcmp(str, "T_DEC64") == 0) return T_DEC64;
     if (strcmp(str, "T_HEX64") == 0) return T_HEX64;
     if (strcmp(str, "T_STRING") == 0) return T_STRING;
-    if (strcmp(str, "T_ENUM") == 0) return T_ENUM;
+    if (strcmp(str, "T_KV") == 0) return T_KV;
     if (strcmp(str, "T_BYTES") == 0) return T_BYTES;
     return -1; // Invalid enum string
 }
@@ -171,7 +171,7 @@ void type_conversion(const void* input, void* output, dtypes_t intype, dtypes_t 
         strncpy(buffer, (char*)input, sizeof(buffer) - 1);
         buffer[sizeof(buffer) - 1] = '\0';
         break;
-    case T_ENUM:
+    case T_KV:
         if (sscanf((char*)input, "%d", (int*)output) == 1)
         {
             // Input is a number, convert to enum string
@@ -210,7 +210,7 @@ void type_conversion(const void* input, void* output, dtypes_t intype, dtypes_t 
         strncpy((char*)output, buffer, output_size - 1);
         ((char*)output)[output_size - 1] = '\0';
         break;
-    case T_ENUM:
+    case T_KV:
         if (sscanf(buffer, "%d", (int*)output) == 1)
         {
             // Output is a number, convert to enum string
