@@ -14,4 +14,26 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="inc\cmd_parse.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\dynamic_call.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\dynamic_pool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\cmd_parse.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dynamic_call.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dynamic_pool.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>
