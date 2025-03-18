@@ -19,9 +19,9 @@ extern "C"
 
 #include <inttypes.h>
 #include <stdio.h>
-#include "../Inc/dynamic_pool.h"
+#include "../Inc/dynpool.h"
 
-#define DYNAMIC_CALL_VERSION		"1.0.2"
+#define DYNAMIC_CALL_VERSION		"1.1.0"
 
 #define DYNAMIC_CALL_FUNC_MAX_CNT	256
 #define DYNAMIC_CALL_ARGS_MAX_CNT	9
@@ -32,6 +32,7 @@ extern "C"
 
 #define PVAL(p)						(*(p))
 
+    typedef int64_t ret_dec64_t;
     typedef int64_t* dyn_dec64p_t;
     typedef uint64_t* dyn_hex64p_t;
     typedef uint64_t* dyn_enump_t;
@@ -54,17 +55,43 @@ extern "C"
     typedef struct {
         char* name;
         delegate handler;
-        dtypes_t* args_type;
+        dtypes_t ret_type;
+        dtypes_t args_type[DYNAMIC_CALL_ARGS_MAX_CNT];
         uint8_t args_count;
-    }delegate_t;
+    } function_info_t;
 
-    extern delegate_t delegates[];
-    extern uint16_t delegates_count;
+    typedef struct {
+        char* name;
+        function_info_t* func_table;
+        uint16_t func_count;
+    } function_group_t;
 
+#define FUNCTION_GROUP(NAME, ...)                                                       \
+    .name = NAME,                                                                       \
+    .func_table = (function_info_t[]) { __VA_ARGS__ },                                  \
+    .func_count = sizeof((function_info_t[]) { __VA_ARGS__ }) / sizeof(function_info_t) \
 
-    void delegate_register(delegate delegate, char* name, dtypes_t* args_type, uint8_t args_count);
-    delegate_t* find_delegate_by_name(delegate_t* delegates, uint16_t delegates_count, char* name);
-    void invoke(dynamic_pool_t* pool, delegate_t* f);
+#define FUNCTION_INFO(HANDLER, RET, ...) {                                              \
+    .name = #HANDLER,                                                                   \
+    .handler = HANDLER,                                                                 \
+    .ret_type = RET,                                                                    \
+    .args_type = { __VA_ARGS__ },                                                       \
+    .args_count = sizeof((dtypes_t[]) { __VA_ARGS__ }) / sizeof(dtypes_t)               \
+}
+
+#if defined(__GNUC__) || defined(__clang__)
+#define FUNC_SIGNATURE __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define FUNC_SIGNATURE __FUNCSIG__
+#else
+#define FUNC_SIGNATURE __func__
+#endif
+
+#define PRINT_FUNC_SIGNATURE()  printf("[function signature]: %s\n", FUNC_SIGNATURE)
+
+    function_info_t* get_func_by_name(function_group_t* group, char* name);
+    void invoke_by_cmd(function_group_t* group, char* cmd);
+    void invoke(function_info_t* f);
 
 
 #ifdef __cplusplus

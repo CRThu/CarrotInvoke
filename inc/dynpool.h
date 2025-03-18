@@ -1,15 +1,15 @@
 /****************************
-* DYNAMIC POOL
-* CARROT HU
-* 2024.09.04
+* DYNPOOL
+* CRTHu
+* 2025.03.18
 *****************************/
 #pragma once
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
-#ifndef _DYNAMIC_POOL_H_
-#define _DYNAMIC_POOL_H_
+#ifndef _DYNPOOL_H_
+#define _DYNPOOL_H_
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
@@ -20,11 +20,11 @@ extern "C"
 {
 #endif
 
-#define DYNAMIC_POOL_VERSION    "1.0.2"
+#define DYNAMIC_POOL_VERSION        "1.1.0"
 
 
-#define DYNAMIC_POOL_MAX_BYTES 1024
-#define DYNAMIC_POOL_MAX_PARAMS 256
+#define DYNPOOL_MAX_BYTES           1024
+#define DYNPOOL_MAX_PARAMS          32
 
     // DYNAMIC TYPES IS VALUE OR POINTER
 #define DTYPES_BITS_OFFSET          (7)
@@ -42,9 +42,9 @@ extern "C"
 #define DTYPES_STORE_LEN_PTR        (0x03 << DTYPES_STORE_LEN_OFFSET)
 #define DTYPES_GET_LEN(x)           ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_1B) ? 1 \
                                         : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_8B) ? 8 \
-                                            : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_RESERVED) ? -1 \
-                                                : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_PTR) ? 0 \
-                                                    : -1))))
+                                            : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_RESERVED) ? DYNPOOL_ERR_UNKNOWN_LEN \
+                                                : ((((x) & DTYPES_STORE_LEN_MASK) == DTYPES_STORE_LEN_PTR) ? DYNPOOL_ERR_UNKNOWN_LEN \
+                                                    : DYNPOOL_ERR_UNKNOWN_LEN))))
 // DYNAMIC CALLS PARAMS DATATYPES
 #define DTYPES_STORE_DTYPE_OFFSET   (0)
 #define DTYPES_STORE_DTYPE_MASK     (0x1F << DTYPES_STORE_DTYPE_OFFSET)
@@ -66,6 +66,7 @@ extern "C"
     |- BYTES    BYTE ARRAY                  uint8_t*
     |- JSON     JSON OBJECT                 json_t*
 */
+#define T_VOID                      0
 #define T_NULL                      (DTYPES_STORE_VAL | DTYPES_STORE_LEN_1B | DTYPES_STORE_NULL)
 #define T_DEC64                     (DTYPES_STORE_VAL | DTYPES_STORE_LEN_8B | DTYPES_STORE_DEC64)
 #define T_HEX64                     (DTYPES_STORE_VAL | DTYPES_STORE_LEN_8B | DTYPES_STORE_HEX64)
@@ -74,46 +75,55 @@ extern "C"
 #define T_BYTES                     (DTYPES_STORE_REF | DTYPES_STORE_LEN_PTR | DTYPES_STORE_BYTES)
 #define T_JSON                      (DTYPES_STORE_REF | DTYPES_STORE_LEN_PTR | DTYPES_STORE_JSON)
 
+#define DYNPOOL_ERR_NONE            (0)
+#define DYNPOOL_ERR_NULL_OBJECT     (-1)
+#define DYNPOOL_ERR_FULL_POOL       (-2)
+#define DYNPOOL_ERR_UNKNOWN_LEN     (-3)
+
+
     typedef uint8_t dtypes_t;
-    typedef int8_t dynamic_pool_status_t;
+    typedef int8_t dynpool_status_t;
 
     /// <summary>
     /// 动态类型数组结构体
     /// </summary>
     typedef struct {
         /// <summary>
-        /// 字符串原格式数据存储
+        /// 数据存储池
         /// </summary>
-        char buf[DYNAMIC_POOL_MAX_BYTES];
+        uint8_t buf[DYNPOOL_MAX_BYTES];
 
         /// <summary>
         /// 每个元素开始地址
         /// </summary>
-        uint16_t offset[DYNAMIC_POOL_MAX_PARAMS];
+        uint16_t offset[DYNPOOL_MAX_PARAMS];
 
         /// <summary>
         /// 每个元素字节长度
         /// </summary>
-        uint16_t len[DYNAMIC_POOL_MAX_PARAMS];
+        uint16_t len[DYNPOOL_MAX_PARAMS];
+
+        /// <summary>
+        /// buf写入游标
+        /// </summary>
+        uint16_t cursor;
 
         /// <summary>
         /// 目前存储元素数量
         /// </summary>
         uint16_t count;
-    }dynamic_pool_t;
+    }dynpool_t;
 
-    void dynamic_pool_init(dynamic_pool_t* dyn);
-    dynamic_pool_status_t dynamic_pool_add(dynamic_pool_t* dyn, dtypes_t type, void* data, uint16_t len);
-    void dynamic_pool_get(dynamic_pool_t* dyn, uint16_t index, dtypes_t type, void* data, uint16_t len);
+    dynpool_status_t dynpool_init(dynpool_t* pool);
+    dynpool_status_t dynpool_set(dynpool_t* pool, dtypes_t intype, void* indata, uint16_t len);
+    void dynpool_get(dynpool_t* dyn, uint16_t index, dtypes_t type, void* data, uint16_t len);
 
-    void dynamic_pool_print(dynamic_pool_t* dyn);
+    void dynpool_print(dynpool_t* dyn);
 
-    const char* enum_to_string(dtypes_t type);
-    dtypes_t string_to_enum(const char* str);
-    void type_conversion(const void* input, void* output, dtypes_t intype, dtypes_t outtype, size_t input_size, size_t output_size);
+    void dtype_conversion(const void* input, void* output, dtypes_t intype, dtypes_t outtype, size_t input_size, size_t output_size);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _DYNAMIC_POOL_H_ */
+#endif /* _DYNPOOL_H_ */

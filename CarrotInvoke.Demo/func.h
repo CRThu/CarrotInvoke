@@ -11,7 +11,16 @@ extern "C"
 {
 #endif
 
-    void dynamic_call_register();
+    #include "../inc/dynamic_call.h"
+
+    extern const function_group_t default_func_group;
+
+
+    void print_hello();
+    void print_dec(dyn_dec64p_t a);
+    void print_hex(dyn_hex64p_t a);
+    void print_string(dyn_string_t a);
+    ret_dec64_t print_add(dyn_dec64p_t a, dyn_dec64p_t b);
 
 
 #ifdef __cplusplus

@@ -21,7 +21,7 @@ extern "C"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../Inc/dynamic_pool.h"
+#include "../Inc/dynpool.h"
 
 #define CMD_PARSE_VERSION    "1.0.2"
 
@@ -31,8 +31,8 @@ extern "C"
 
     typedef int8_t cmd_parse_status_t;
 
-    cmd_parse_status_t cmd_parse_one(dynamic_pool_t* pool, char* cmd, uint16_t len);
-    cmd_parse_status_t parse_params(dynamic_pool_t* pool, char* cmd, uint16_t len);
+    cmd_parse_status_t cmd_parse_one(dynpool_t* pool, char* cmd, uint16_t len);
+    cmd_parse_status_t parse_params(dynpool_t* pool, char* cmd, uint16_t len);
 
 
 #ifdef __cplusplus

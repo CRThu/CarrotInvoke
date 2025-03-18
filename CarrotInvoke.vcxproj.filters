@@ -21,7 +21,7 @@
     <ClInclude Include="inc\dynamic_call.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="inc\dynamic_pool.h">
+    <ClInclude Include="inc\dynpool.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -32,7 +32,7 @@
     <ClCompile Include="src\dynamic_call.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\dynamic_pool.c">
+    <ClCompile Include="src\dynpool.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

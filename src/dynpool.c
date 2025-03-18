@@ -1,14 +1,21 @@
-#include "../Inc/dynamic_pool.h"
+#include "dynpool.h"
+
 /// <summary>
 /// 初始化动态类型数组
 /// </summary>
 /// <param name="pool">空动态类型数组结构体</param>
-void dynamic_pool_init(dynamic_pool_t* pool)
+dynpool_status_t dynpool_init(dynpool_t* pool)
 {
-    memset(pool->buf, 0u, DYNAMIC_POOL_MAX_BYTES);
-    memset(pool->offset, 0u, DYNAMIC_POOL_MAX_PARAMS);
-    memset(pool->len, 0u, DYNAMIC_POOL_MAX_PARAMS);
+    if (pool == NULL)
+        return DYNPOOL_ERR_NULL_OBJECT;
+
+    memset(pool->buf, 0u, DYNPOOL_MAX_BYTES);
+    memset(pool->offset, 0u, DYNPOOL_MAX_PARAMS);
+    memset(pool->len, 0u, DYNPOOL_MAX_PARAMS);
     pool->count = 0;
+    pool->cursor = 0;
+
+    return DYNPOOL_ERR_NONE;
 }
 
 /// <summary>
@@ -17,46 +24,44 @@ void dynamic_pool_init(dynamic_pool_t* pool)
 /// <param name="pool">动态类型数组结构体</param>
 /// <param name="intype">变量类型（未使用）</param>
 /// <param name="data">变量首地址指针</param>
-/// <param name="len">变量长度</param>
-dynamic_pool_status_t dynamic_pool_add(dynamic_pool_t* pool, dtypes_t intype, void* data, uint16_t len)
+/// <param name="len">变量长度,若为值类型则未使用</param>
+dynpool_status_t dynpool_set(dynpool_t* pool, dtypes_t intype, void* indata, uint16_t len)
 {
-    // intype = string now
-    intype = T_STRING;
-
-    if (pool->count >= DYNAMIC_POOL_MAX_PARAMS)
+    // check pool params count
+    if (pool->count + 1 >= DYNPOOL_MAX_PARAMS)
     {
-        return -1;
+        return DYNPOOL_ERR_FULL_POOL;
     }
 
-    uint16_t start_offset = strlen(pool->buf);
-
-
+    // get len
     if (!DTYPES_IS_REF(intype))
     {
         len = DTYPES_GET_LEN(intype);
-        if (len == 0)
-            return -2;
+        if (len < 0)
+            return DYNPOOL_ERR_UNKNOWN_LEN;
     }
 
-    if (start_offset + len > DYNAMIC_POOL_MAX_BYTES - 1)
+    // check pool buffer count
+    if (pool->cursor + len >= DYNPOOL_MAX_BYTES)
     {
-        return -3;
+        return DYNPOOL_ERR_FULL_POOL;
     }
 
     if (DTYPES_IS_REF(intype))
     {
-        memcpy(&pool->buf[start_offset], (char*)data, len);
+        memcpy(&pool->buf[pool->cursor], (uint8_t*)indata, len);
     }
     else
     {
-        memcpy(&pool->buf[start_offset], data, len);
+        memcpy(&pool->buf[pool->cursor], indata, len);
     }
 
-    pool->offset[pool->count] = start_offset;
+    pool->offset[pool->count] = pool->cursor;
     pool->len[pool->count] = len;
     pool->count++;
+    pool->cursor = pool->cursor + len;
 
-    return 0;
+    return DYNPOOL_ERR_NONE;
 }
 
 /// <summary>
@@ -67,14 +72,14 @@ dynamic_pool_status_t dynamic_pool_add(dynamic_pool_t* pool, dtypes_t intype, vo
 /// <param name="type">类型</param>
 /// <param name="data">数据指针</param>
 /// <param name="len">数据长度</param>
-void dynamic_pool_get(dynamic_pool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t len)
+void dynpool_get(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t len)
 {
     if (index < pool->count)
     {
         // TODO
         void* internal_data = &pool->buf[pool->offset[index]];
         uint16_t internal_len = pool->len[index];
-        type_conversion(internal_data, (size_t*)data, T_BYTES, type, internal_len, len);
+        dtype_conversion(internal_data, (size_t*)data, T_BYTES, type, internal_len, len);
     }
     else
     {
@@ -87,7 +92,7 @@ void dynamic_pool_get(dynamic_pool_t* pool, uint16_t index, dtypes_t type, void*
 /// 打印数据存储池
 /// </summary>
 /// <param name="pool">存储结构</param>
-void dynamic_pool_print(dynamic_pool_t* pool)
+void dynpool_print(dynpool_t* pool)
 {
     for (uint16_t i = 0; i < pool->count; i++)
     {
@@ -114,34 +119,6 @@ void dynamic_pool_print(dynamic_pool_t* pool)
     }
 }
 
-
-
-const char* enum_to_string(dtypes_t type)
-{
-    switch (type)
-    {
-    case T_NULL: return "T_NULL";
-    case T_DEC64: return "T_DEC64";
-    case T_HEX64: return "T_HEX64";
-    case T_STRING: return "T_STRING";
-    case T_KV: return "T_KV";
-    case T_BYTES: return "T_BYTES";
-    default: return "UNKNOWN";
-    }
-}
-
-dtypes_t string_to_enum(const char* str)
-{
-    if (strcmp(str, "T_NULL") == 0) return T_NULL;
-    if (strcmp(str, "T_DEC64") == 0) return T_DEC64;
-    if (strcmp(str, "T_HEX64") == 0) return T_HEX64;
-    if (strcmp(str, "T_STRING") == 0) return T_STRING;
-    if (strcmp(str, "T_KV") == 0) return T_KV;
-    if (strcmp(str, "T_BYTES") == 0) return T_BYTES;
-    return -1; // Invalid enum string
-}
-
-
 /// <summary>
 /// 类型转换
 /// </summary>
@@ -151,7 +128,7 @@ dtypes_t string_to_enum(const char* str)
 /// <param name="outtype">输出数据类型</param>
 /// <param name="input_size">输入数据长度</param>
 /// <param name="output_size">输出数据长度</param>
-void type_conversion(const void* input, void* output, dtypes_t intype, dtypes_t outtype, size_t input_size, size_t output_size)
+void dtype_conversion(const void* input, void* output, dtypes_t intype, dtypes_t outtype, size_t input_size, size_t output_size)
 {
     char buffer[100];
 
@@ -171,20 +148,20 @@ void type_conversion(const void* input, void* output, dtypes_t intype, dtypes_t 
         strncpy(buffer, (char*)input, sizeof(buffer) - 1);
         buffer[sizeof(buffer) - 1] = '\0';
         break;
-    case T_KV:
-        if (sscanf((char*)input, "%d", (int*)output) == 1)
-        {
-            // Input is a number, convert to enum string
-            strncpy(buffer, enum_to_string(*(int*)output), sizeof(buffer) - 1);
-        }
-        else
-        {
-            // Input is a string, convert to enum number
-            *(int*)output = string_to_enum((char*)input);
-            strncpy(buffer, (char*)input, sizeof(buffer) - 1);
-        }
-        buffer[sizeof(buffer) - 1] = '\0';
-        break;
+        //case T_KV:
+        //    if (sscanf((char*)input, "%d", (int*)output) == 1)
+        //    {
+        //        // Input is a number, convert to enum string
+        //        strncpy(buffer, enum_to_string(*(int*)output), sizeof(buffer) - 1);
+        //    }
+        //    else
+        //    {
+        //        // Input is a string, convert to enum number
+        //        *(int*)output = string_to_enum((char*)input);
+        //        strncpy(buffer, (char*)input, sizeof(buffer) - 1);
+        //    }
+        //    buffer[sizeof(buffer) - 1] = '\0';
+        //    break;
     case T_BYTES:
         memcpy(buffer, input, input_size);
         buffer[input_size] = '\0'; // Ensure null-terminated string for further processing
@@ -210,20 +187,20 @@ void type_conversion(const void* input, void* output, dtypes_t intype, dtypes_t 
         strncpy((char*)output, buffer, output_size - 1);
         ((char*)output)[output_size - 1] = '\0';
         break;
-    case T_KV:
-        if (sscanf(buffer, "%d", (int*)output) == 1)
-        {
-            // Output is a number, convert to enum string
-            strncpy((char*)output, enum_to_string(*(int*)output), output_size - 1);
-        }
-        else
-        {
-            // Output is a string, convert to enum number
-            *(int*)output = string_to_enum(buffer);
-            strncpy((char*)output, buffer, output_size - 1);
-        }
-        ((char*)output)[output_size - 1] = '\0';
-        break;
+        //case T_KV:
+        //    if (sscanf(buffer, "%d", (int*)output) == 1)
+        //    {
+        //        // Output is a number, convert to enum string
+        //        strncpy((char*)output, enum_to_string(*(int*)output), output_size - 1);
+        //    }
+        //    else
+        //    {
+        //        // Output is a string, convert to enum number
+        //        *(int*)output = string_to_enum(buffer);
+        //        strncpy((char*)output, buffer, output_size - 1);
+        //    }
+        //    ((char*)output)[output_size - 1] = '\0';
+        //    break;
     case T_BYTES:
         memcpy(output, buffer, output_size);
         break;

@@ -7,7 +7,7 @@
 /// <param name="cmd">待解析的指令字符串</param>
 /// <param name="len">指令字符串长度</param>
 /// <returns>解析状态</returns>
-cmd_parse_status_t cmd_parse_one(dynamic_pool_t* pool, char* cmd, uint16_t len)
+cmd_parse_status_t cmd_parse_one(dynpool_t* pool, char* cmd, uint16_t len)
 {
     uint16_t curr_pos = 0;
     uint16_t statement_end_pos = 0;
@@ -32,12 +32,12 @@ cmd_parse_status_t cmd_parse_one(dynamic_pool_t* pool, char* cmd, uint16_t len)
 /// <param name="cmd">待解析的参数字符串</param>
 /// <param name="len">参数字符串长度</param>
 /// <returns>解析状态</returns>
-cmd_parse_status_t parse_params(dynamic_pool_t* pool, char* cmd, uint16_t len)
+cmd_parse_status_t parse_params(dynpool_t* pool, char* cmd, uint16_t len)
 {
     uint8_t args_index = 0;
     uint16_t cursor = 0;
     uint16_t start_pos = 0;
-    dynamic_pool_init(pool);
+    dynpool_init(pool);
     while (cursor < len)
     {
         if (CMD_PARSE_ELEMENT_DELIMITER(cmd[cursor]))
@@ -47,7 +47,7 @@ cmd_parse_status_t parse_params(dynamic_pool_t* pool, char* cmd, uint16_t len)
             uint16_t len = 0;
 
 
-            dynamic_pool_add(pool, T_STRING, fromele, fromlen);
+            dynpool_set(pool, T_STRING, fromele, fromlen);
 
             args_index++;
             start_pos = cursor + 1;
