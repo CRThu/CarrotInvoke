@@ -1,37 +1,37 @@
 #include "dynpool.h"
 
+
 /// <summary>
 /// 初始化动态类型数组
 /// </summary>
 /// <param name="pool">空动态类型数组结构体</param>
+/// <returns>返回状态</returns>
 dynpool_status_t dynpool_init(dynpool_t* pool)
 {
-    if (pool == NULL)
-        return DYNPOOL_ERR_NULL_OBJECT;
+    if (pool == NULL)   return DYNPOOL_ERR_NULL_OBJECT;
 
     memset(pool->buf, 0u, DYNPOOL_MAX_BYTES);
-    memset(pool->offset, 0u, DYNPOOL_MAX_PARAMS);
-    memset(pool->len, 0u, DYNPOOL_MAX_PARAMS);
-    pool->count = 0;
+    memset(pool->elements, 0u, DYNPOOL_MAX_VARS);
+    pool->wr_count = 0;
+    pool->rd_count = 0;
     pool->cursor = 0;
 
-    return DYNPOOL_ERR_NONE;
+    return DYNPOOL_NO_ERROR;
 }
 
 /// <summary>
 /// 添加元素通用函数
 /// </summary>
 /// <param name="pool">动态类型数组结构体</param>
-/// <param name="intype">变量类型（未使用）</param>
-/// <param name="data">变量首地址指针</param>
+/// <param name="intype">变量类型</param>
+/// <param name="indata">变量首地址指针</param>
 /// <param name="len">变量长度,若为值类型则未使用</param>
+/// <returns>返回状态</returns>
 dynpool_status_t dynpool_set(dynpool_t* pool, dtypes_t intype, void* indata, uint16_t len)
 {
+    if (pool == NULL)   return DYNPOOL_ERR_NULL_OBJECT;
     // check pool params count
-    if (pool->count + 1 >= DYNPOOL_MAX_PARAMS)
-    {
-        return DYNPOOL_ERR_FULL_POOL;
-    }
+    if (pool->wr_count + 1 >= DYNPOOL_MAX_VARS)     return DYNPOOL_ERR_FULL_POOL;
 
     // get len
     if (!DTYPES_IS_REF(intype))
@@ -56,37 +56,56 @@ dynpool_status_t dynpool_set(dynpool_t* pool, dtypes_t intype, void* indata, uin
         memcpy(&pool->buf[pool->cursor], indata, len);
     }
 
-    pool->offset[pool->count] = pool->cursor;
-    pool->len[pool->count] = len;
-    pool->count++;
-    pool->cursor = pool->cursor + len;
+    dyn_info_t* ele = &pool->elements[pool->wr_count];
+    ele->offset = pool->cursor;
+    ele->len = len;
+    ele->type = intype;
+    pool->wr_count++;
+    pool->cursor += len;
 
-    return DYNPOOL_ERR_NONE;
+    return DYNPOOL_NO_ERROR;
 }
 
 /// <summary>
-/// 获取元素
+/// 按FIFO顺序获取元素
 /// </summary>
 /// <param name="pool">存储结构</param>
-/// <param name="index">元素索引</param>
 /// <param name="type">类型</param>
 /// <param name="data">数据指针</param>
 /// <param name="len">数据长度</param>
-void dynpool_get(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t len)
+/// <returns>返回状态</returns>
+dynpool_status_t dynpool_get(dynpool_t* pool, dtypes_t type, void* data, uint16_t len)
 {
-    if (index < pool->count)
-    {
-        // TODO
-        void* internal_data = &pool->buf[pool->offset[index]];
-        uint16_t internal_len = pool->len[index];
-        dtype_conversion(internal_data, (size_t*)data, T_BYTES, type, internal_len, len);
-    }
-    else
-    {
-        // NO DATA AT INDEX
-    }
+    if (pool->rd_count >= pool->wr_count)   return DYNPOOL_ERR_NO_DATA;
 
+    dyn_info_t* ele = &pool->elements[pool->rd_count];
+    uint16_t used_size;
+    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, len, &used_size);
+    pool->rd_count++;
+
+    return DYNPOOL_NO_ERROR;
 }
+
+/// <summary>
+/// 按index随机读取元素
+/// </summary>
+/// <param name="pool">存储结构</param>
+/// <param name="index">数据索引</param>
+/// <param name="type">类型</param>
+/// <param name="data">数据指针</param>
+/// <param name="len">数据长度</param>
+/// <returns>返回状态</returns>
+dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t len)
+{
+    if (index >= pool->wr_count)   return DYNPOOL_ERR_NO_DATA;
+
+    dyn_info_t* ele = &pool->elements[index];
+    uint16_t used_size;
+    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, len, &used_size);
+
+    return DYNPOOL_NO_ERROR;
+}
+
 
 /// <summary>
 /// 打印数据存储池
@@ -94,29 +113,29 @@ void dynpool_get(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uin
 /// <param name="pool">存储结构</param>
 void dynpool_print(dynpool_t* pool)
 {
-    for (uint16_t i = 0; i < pool->count; i++)
+    printf("----- DYNPOOL PRINT -----\r\n");
+    uint8_t outbuf[DYNPOOL_MAX_BYTES];
+    char* typename;
+    for (uint16_t i = 0; i < pool->wr_count; i++)
     {
-        void* pd = &(pool->buf[pool->offset[i]]);
-        dtypes_t dt = T_STRING;
-        uint16_t len = pool->len[i];
+        dyn_info_t* ele = &pool->elements[i];
+        uint16_t used_size;
+        dtype_conversion(&pool->buf[ele->offset], outbuf, ele->type, T_STRING, ele->len, sizeof(outbuf), &used_size);
 
-        char format[256] = "";
-        memcpy(format, pd, len);
-
-        switch (dt)
+        switch (ele->type)
         {
-        case T_STRING:
-            break;
-        case T_DEC64:
-            sprintf(format, "%d", *((int32_t*)pd));
-            break;
-        case T_HEX64:
-            sprintf(format, "0x%X", (int)*((uint64_t*)pd));
-            break;
+            case T_NULL:    typename = "T_NULL";    break;
+            case T_DEC64:   typename = "T_DEC64";   break;
+            case T_HEX64:   typename = "T_HEX64";   break;
+            case T_KV:      typename = "T_KV";      break;
+            case T_STRING:  typename = "T_STRING";  break;
+            case T_BYTES:   typename = "T_BYTES";   break;
+            case T_JSON:    typename = "T_JSON";    break;
+            default:        typename = "T_UNKNWON"; break;
         }
-
-        printf("INDEX:%d, TYPE:%02X, ADDR:%08X, LEN:%02X, DATA:%s\r\n", i, dt, (uint32_t)pd, len, format);
+        printf("DYNPOOL[%2d](TYPE: %-9s): %s\r\n", i, typename, outbuf);
     }
+    printf("----- DYNPOOL PRINT -----\r\n");
 }
 
 /// <summary>
@@ -128,83 +147,132 @@ void dynpool_print(dynpool_t* pool)
 /// <param name="outtype">输出数据类型</param>
 /// <param name="input_size">输入数据长度</param>
 /// <param name="output_size">输出数据长度</param>
-void dtype_conversion(const void* input, void* output, dtypes_t intype, dtypes_t outtype, size_t input_size, size_t output_size)
+/// <returns>返回状态</returns>
+dynpool_status_t dtype_conversion(const void* input, void* output, dtypes_t intype, dtypes_t outtype, uint16_t input_size, uint16_t output_size, uint16_t* used_size)
 {
-    char buffer[100];
+    char buffer[256]; // 中间缓冲区，足够大以处理大部分情况
+    *used_size = 0;
 
-    // Convert input to string using sprintf
+    // 处理输入类型，转换为中间格式
     switch (intype)
     {
-    case T_NULL:
-        buffer[0] = '\0';
+        case T_NULL:
+            buffer[0] = '\0';
+            break;
+
+        case T_DEC64: // 有符号十进制
+            snprintf(buffer, sizeof(buffer), "%" PRId64, *(const int64_t*)input);
+            break;
+
+        case T_HEX64: // 无符号十六进制
+            snprintf(buffer, sizeof(buffer), "%" PRIX64, *(const uint64_t*)input);
+            break;
+
+        case T_STRING: // 字符串类型
+        {
+            // 安全拷贝并保证终止符
+            size_t copy_len = input_size < sizeof(buffer) - 1 ? input_size : sizeof(buffer) - 1;
+            strncpy(buffer, (const char*)input, copy_len);
+            buffer[copy_len] = '\0';
+        }
         break;
-    case T_DEC64:
-        sprintf(buffer, "%"PRId64"", *(int64_t*)input);
+
+        case T_BYTES: // 二进制类型转十六进制字符串
+        {
+            const uint8_t* bytes = (const uint8_t*)input;
+            char* p = buffer;
+            for (uint16_t i = 0; i < input_size && (p - buffer) < sizeof(buffer) - 2; i++)
+            {
+                snprintf(p, 3, "%02X", bytes[i]);
+                p += 2;
+            }
+            *p = '\0';
+        }
         break;
-    case T_HEX64:
-        sprintf(buffer, "%"PRIX64"", *(int64_t*)input);
-        break;
-    case T_STRING:
-        strncpy(buffer, (char*)input, sizeof(buffer) - 1);
-        buffer[sizeof(buffer) - 1] = '\0';
-        break;
-        //case T_KV:
-        //    if (sscanf((char*)input, "%d", (int*)output) == 1)
-        //    {
-        //        // Input is a number, convert to enum string
-        //        strncpy(buffer, enum_to_string(*(int*)output), sizeof(buffer) - 1);
-        //    }
-        //    else
-        //    {
-        //        // Input is a string, convert to enum number
-        //        *(int*)output = string_to_enum((char*)input);
-        //        strncpy(buffer, (char*)input, sizeof(buffer) - 1);
-        //    }
-        //    buffer[sizeof(buffer) - 1] = '\0';
-        //    break;
-    case T_BYTES:
-        memcpy(buffer, input, input_size);
-        buffer[input_size] = '\0'; // Ensure null-terminated string for further processing
-        break;
-    default:
-        printf("Unsupported input type\n");
-        return;
+
+        default:
+            return DYNPOOL_ERR_UNSUPPORTED_TYPE;
     }
 
-    // Convert string to output type using sscanf
+    // 处理输出类型，进行类型转换
     switch (outtype)
     {
-    case T_NULL:
-        // No conversion needed for T_NULL
+        case T_NULL: // 无需转换
+            *used_size = 0;
+            return DYNPOOL_NO_ERROR;
+
+        case T_DEC64: // 转有符号十进制
+        {
+            if (output_size < sizeof(int64_t))
+                return DYNPOOL_ERR_INSUFFICIENT_BUFFER;
+
+            char* endptr;
+            int64_t value = strtoll(buffer, &endptr, 10);
+            if (*endptr != '\0')
+                return DYNPOOL_ERR_CONVERSION_FAILED;
+
+            *(int64_t*)output = value;
+            *used_size = sizeof(int64_t);
+        }
         break;
-    case T_DEC64:
-        sscanf(buffer, "%"PRId64"", (int64_t*)output);
+
+        case T_HEX64: // 转无符号十六进制
+        {
+            if (output_size < sizeof(uint64_t))
+                return DYNPOOL_ERR_INSUFFICIENT_BUFFER;
+
+            char* endptr;
+            uint64_t value = strtoull(buffer, &endptr, 16);
+            if (*endptr != '\0')
+                return DYNPOOL_ERR_CONVERSION_FAILED;
+
+            *(uint64_t*)output = value;
+            *used_size = sizeof(uint64_t);
+        }
         break;
-    case T_HEX64:
-        sscanf(buffer, "%"PRIX64"", (uint64_t*)output);
+
+        case T_STRING: // 转字符串类型
+        {
+            size_t req_size = strlen(buffer) + 1; // 包含终止符
+            if (output_size < req_size)
+            {
+                *used_size = req_size;
+                return DYNPOOL_ERR_INSUFFICIENT_BUFFER;
+            }
+
+            strncpy((char*)output, buffer, output_size);
+            ((char*)output)[output_size - 1] = '\0'; // 强制终止
+            *used_size = strlen(buffer) + 1;
+        }
         break;
-    case T_STRING:
-        strncpy((char*)output, buffer, output_size - 1);
-        ((char*)output)[output_size - 1] = '\0';
+
+        case T_BYTES: // 转二进制类型（需十六进制解析）
+        {
+            size_t hex_len = strlen(buffer);
+            if (hex_len % 2 != 0)
+                return DYNPOOL_ERR_CONVERSION_FAILED;
+
+            size_t byte_count = hex_len / 2;
+            if (output_size < byte_count)
+            {
+                *used_size = byte_count;
+                return DYNPOOL_ERR_INSUFFICIENT_BUFFER;
+            }
+
+            uint8_t* bytes = (uint8_t*)output;
+            for (size_t i = 0; i < byte_count; i++)
+            {
+                if (sscanf(buffer + i * 2, "%2hhX", &bytes[i]) != 1)
+                    return DYNPOOL_ERR_CONVERSION_FAILED;
+            }
+            *used_size = byte_count;
+        }
         break;
-        //case T_KV:
-        //    if (sscanf(buffer, "%d", (int*)output) == 1)
-        //    {
-        //        // Output is a number, convert to enum string
-        //        strncpy((char*)output, enum_to_string(*(int*)output), output_size - 1);
-        //    }
-        //    else
-        //    {
-        //        // Output is a string, convert to enum number
-        //        *(int*)output = string_to_enum(buffer);
-        //        strncpy((char*)output, buffer, output_size - 1);
-        //    }
-        //    ((char*)output)[output_size - 1] = '\0';
-        //    break;
-    case T_BYTES:
-        memcpy(output, buffer, output_size);
-        break;
-    default:
-        printf("Unsupported output type\n");
+
+        default:
+            return DYNPOOL_ERR_UNSUPPORTED_TYPE;
     }
+
+    return DYNPOOL_NO_ERROR;
+
 }

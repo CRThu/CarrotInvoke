@@ -76,7 +76,7 @@ void invoke(dynpool_t* pool, function_info_t* f)
 
     for (uint16_t i = 1; i <= f->args_count; i++)
     {
-        dynpool_get(pool, i, f->args_type[i - 1], args[i - 1], 100);
+        dynpool_get(pool, f->args_type[i - 1], args[i - 1], 100);
     }
 
     switch (f->args_count)
