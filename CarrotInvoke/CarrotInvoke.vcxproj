@@ -19,12 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="inc\cmdcall.h" />
+    <ClInclude Include="inc\cmdparse.h" />
     <ClInclude Include="inc\dyncall.h" />
     <ClInclude Include="inc\dynpool.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\cmd_parse.c" />
+    <ClCompile Include="src\cmdparse.c" />
     <ClCompile Include="src\dyncall.c" />
     <ClCompile Include="src\dynpool.c" />
   </ItemGroup>

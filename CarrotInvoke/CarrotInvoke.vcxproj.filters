@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="inc\cmdcall.h">
+    <ClInclude Include="inc\cmdparse.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="inc\dyncall.h">
@@ -26,7 +26,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\cmd_parse.c">
+    <ClCompile Include="src\cmdparse.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\dyncall.c">

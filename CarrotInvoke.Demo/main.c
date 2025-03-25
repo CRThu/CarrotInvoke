@@ -1,5 +1,5 @@
 #include "func.h"
-#include "cmdcall.h"
+#include "dyncall.h"
 #include <stdio.h>
 #include <stdlib.h>
 

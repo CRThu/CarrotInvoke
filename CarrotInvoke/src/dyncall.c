@@ -22,18 +22,18 @@ function_info_t* get_func_by_name(function_group_t* group, char* name)
 }
 
 
-void invoke(function_group_t* group, char* cmd, ...)
+void invoke(function_group_t* group, char* funcname, ...)
 {
-    function_info_t* f = get_func_by_name(group, cmd);
+    function_info_t* f = get_func_by_name(group, funcname);
     if (f == NULL)
     {
-        printf("Function '%s' not found\n", cmd);
+        printf("Function '%s' not found\n", funcname);
         return;
     }
 
     // 准备参数
     va_list args;
-    va_start(args, cmd);
+    va_start(args, funcname);
 
     dynpool_t pool;
     dynpool_init(&pool);
