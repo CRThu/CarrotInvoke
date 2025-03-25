@@ -31,7 +31,7 @@ dynpool_status_t dynpool_set(dynpool_t* pool, dtypes_t intype, void* indata, uin
 {
     if (pool == NULL)   return DYNPOOL_ERR_NULL_OBJECT;
     // check pool params count
-    if (pool->wr_count + 1 >= DYNPOOL_MAX_VARS)     return DYNPOOL_ERR_FULL_POOL;
+    if (pool->wr_count + 1 > DYNPOOL_MAX_VARS)     return DYNPOOL_ERR_FULL_POOL;
 
     // get len
     if (!DTYPES_IS_REF(intype))

@@ -13,7 +13,7 @@ extern "C"
 
     #include "dyncall.h"
 
-    extern const function_group_t default_func_group;
+    extern function_group_t default_func_group;
 
 #ifdef __cplusplus
 }

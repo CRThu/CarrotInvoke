@@ -43,7 +43,7 @@ void print_args(dyn_string_t a0,
            , PREF(a2));
 }
 
-const function_group_t default_func_group =
+function_group_t default_func_group =
 {
     FUNCTION_GROUP("default_func_group",
         FUNCTION_INFO(print_hello, T_NULL, T_VOID),

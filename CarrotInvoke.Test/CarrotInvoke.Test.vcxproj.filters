@@ -15,18 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CarrotInvoke.DynamicPool.Test.cpp">
+    <ClCompile Include="DynPool.Test.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="CmdParse.Test.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="CarrotInvoke.DynamicCall.Test.cpp">
+    <ClCompile Include="DynCall.Test.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CarrotInvoke.Demo\func.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h">
+    <ClInclude Include="..\CarrotInvoke.Demo\func.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

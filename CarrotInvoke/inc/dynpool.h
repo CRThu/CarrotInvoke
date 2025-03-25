@@ -24,7 +24,7 @@ extern "C"
 
 
     #define DYNPOOL_MAX_BYTES           1024
-    #define DYNPOOL_MAX_VARS            32
+    #define DYNPOOL_MAX_VARS            4
 
     // DYNAMIC TYPES IS VALUE OR POINTER
     #define DTYPES_BITS_OFFSET          (7)
