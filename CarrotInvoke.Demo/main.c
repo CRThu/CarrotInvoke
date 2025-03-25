@@ -67,26 +67,20 @@ void cmdparse_test()
 {
     printf("--------------- CMDPARSE TEST ---------------\r\n");
     // 解析复杂案例
-    const char* code = "process(data.parse(1,2), , 'value', 123);";
+    const char* code = "print_args(1,2,3);";
     dynpool_t pool;
     uint16_t len;
 
     if (cmdparse_from_string(&pool, code, &len) == CMDPARSE_OK)
     {
-        dynpool_print(&pool);
-        // 输出:
-        // [0] 'process'
-        // [1] 'data.parse(1,2)'
-        // [2] ''
-        // [3] ''value''
-        // [4] '123'
+        invoke_by_cmd(&default_func_group, &pool);
     }
 }
 
 int main()
 {
-    dynpool_internal_test();
-    invoke_test();
-    dyncall_test();
+    //dynpool_internal_test();
+    //invoke_test();
+    //dyncall_test();
     cmdparse_test();
 }

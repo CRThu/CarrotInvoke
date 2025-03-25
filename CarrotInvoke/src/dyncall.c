@@ -22,18 +22,18 @@ function_info_t* get_func_by_name(function_group_t* group, char* name)
 }
 
 
-void invoke(function_group_t* group, char* funcname, ...)
+void invoke(function_group_t* group, char* fname, ...)
 {
-    function_info_t* f = get_func_by_name(group, funcname);
+    function_info_t* f = get_func_by_name(group, fname);
     if (f == NULL)
     {
-        printf("Function '%s' not found\n", funcname);
+        printf("Function '%s' not found\n", fname);
         return;
     }
 
     // 准备参数
     va_list args;
-    va_start(args, funcname);
+    va_start(args, fname);
 
     dynpool_t pool;
     dynpool_init(&pool);
@@ -86,6 +86,38 @@ void invoke(function_group_t* group, char* funcname, ...)
     invoke_by_pool(&pool, f);
 }
 
+void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
+{
+    if (group == NULL || pool == NULL)
+    {
+        printf("Invalid group or pool\n");
+        return;
+    }
+
+    uint16_t used_size = 0;
+    uint8_t fname_buf[DYNCALL_ARGS_MAX_SIZE];
+    dynpool_status_t status = dynpool_get(pool, T_STRING, fname_buf, sizeof(fname_buf), &used_size);
+
+    //#if(DYNCALL_DEBUG)
+    //dynpool_print(pool);
+    //#endif
+
+    if (status != DYNPOOL_NO_ERROR)
+    {
+        printf("Failed to get function name from pool\n");
+        return;
+    }
+
+    function_info_t* f = get_func_by_name(group, fname_buf);
+    if (f == NULL)
+    {
+        printf("Function '%s' not found\n", fname_buf);
+        return;
+    }
+
+    invoke_by_pool(pool, f);
+}
+
 /// <summary>
 /// 调用函数
 /// </summary>
@@ -112,10 +144,18 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
         // 从原始pool读取参数
         dynpool_status_t status = dynpool_get(pool, f->args_type[i], arg_buffer, sizeof(arg_buffer), &used_size);
 
+
         if (status != DYNPOOL_NO_ERROR)
         {
-            printf("Failed to get argument %d\n", i);
-            return;
+            if (status == DYNPOOL_ERR_NO_DATA)
+            {
+                printf("Warning: No data at argument %d\n", i);
+            }
+            else
+            {
+                printf("Failed to get argument %d\n", i);
+                return;
+            }
         }
 
         // 将参数存入新pool
@@ -127,8 +167,8 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
     #endif
 
     // 根据参数数量调用函数
-    dtypes_t* dtype;
-    uint16_t used_size = 0;
+    dtypes_t dtype;
+    uint16_t size;
     switch (GET_FUNC_ARGS_COUNT(f))
     {
         case 0:
@@ -139,99 +179,99 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
         case 1:
         {
             void* arg0;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
             ((delegate_a1r0)f->handler)(&arg0);
             break;
         }
         case 2:
         {
             void* arg0, * arg1;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
             ((delegate_a2r0)f->handler)(&arg0, &arg1);
             break;
         }
         case 3:
         {
             void* arg0, * arg1, * arg2;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
-            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
+            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &size);
             ((delegate_a3r0)f->handler)(&arg0, &arg1, &arg2);
             break;
         }
         case 4:
         {
             void* arg0, * arg1, * arg2, * arg3;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
-            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &used_size);
-            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
+            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &size);
+            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &size);
             ((delegate_a4r0)f->handler)(&arg0, &arg1, &arg2, &arg3);
             break;
         }
         case 5:
         {
             void* arg0, * arg1, * arg2, * arg3, * arg4;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
-            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &used_size);
-            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &used_size);
-            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
+            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &size);
+            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &size);
+            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &size);
             ((delegate_a5r0)f->handler)(&arg0, &arg1, &arg2, &arg3, &arg4);
             break;
         }
         case 6:
         {
             void* arg0, * arg1, * arg2, * arg3, * arg4, * arg5;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
-            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &used_size);
-            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &used_size);
-            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &used_size);
-            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
+            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &size);
+            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &size);
+            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &size);
+            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &size);
             ((delegate_a6r0)f->handler)(&arg0, &arg1, &arg2, &arg3, &arg4, &arg5);
             break;
         }
         case 7:
         {
             void* arg0, * arg1, * arg2, * arg3, * arg4, * arg5, * arg6;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
-            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &used_size);
-            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &used_size);
-            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &used_size);
-            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &used_size);
-            dynpool_peek(&arg_pool, 6, &dtype, &arg6, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
+            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &size);
+            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &size);
+            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &size);
+            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &size);
+            dynpool_peek(&arg_pool, 6, &dtype, &arg6, &size);
             ((delegate_a7r0)f->handler)(&arg0, &arg1, &arg2, &arg3, &arg4, &arg5, &arg6);
             break;
         }
         case 8:
         {
             void* arg0, * arg1, * arg2, * arg3, * arg4, * arg5, * arg6, * arg7;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
-            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &used_size);
-            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &used_size);
-            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &used_size);
-            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &used_size);
-            dynpool_peek(&arg_pool, 6, &dtype, &arg6, &used_size);
-            dynpool_peek(&arg_pool, 7, &dtype, &arg7, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
+            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &size);
+            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &size);
+            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &size);
+            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &size);
+            dynpool_peek(&arg_pool, 6, &dtype, &arg6, &size);
+            dynpool_peek(&arg_pool, 7, &dtype, &arg7, &size);
             ((delegate_a8r0)f->handler)(&arg0, &arg1, &arg2, &arg3, &arg4, &arg5, &arg6, &arg7);
             break;
         }
         case 9:
         {
             void* arg0, * arg1, * arg2, * arg3, * arg4, * arg5, * arg6, * arg7, * arg8;
-            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &used_size);
-            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &used_size);
-            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &used_size);
-            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &used_size);
-            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &used_size);
-            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &used_size);
-            dynpool_peek(&arg_pool, 6, &dtype, &arg6, &used_size);
-            dynpool_peek(&arg_pool, 7, &dtype, &arg7, &used_size);
-            dynpool_peek(&arg_pool, 8, &dtype, &arg8, &used_size);
+            dynpool_peek(&arg_pool, 0, &dtype, &arg0, &size);
+            dynpool_peek(&arg_pool, 1, &dtype, &arg1, &size);
+            dynpool_peek(&arg_pool, 2, &dtype, &arg2, &size);
+            dynpool_peek(&arg_pool, 3, &dtype, &arg3, &size);
+            dynpool_peek(&arg_pool, 4, &dtype, &arg4, &size);
+            dynpool_peek(&arg_pool, 5, &dtype, &arg5, &size);
+            dynpool_peek(&arg_pool, 6, &dtype, &arg6, &size);
+            dynpool_peek(&arg_pool, 7, &dtype, &arg7, &size);
+            dynpool_peek(&arg_pool, 8, &dtype, &arg8, &size);
             ((delegate_a9r0)f->handler)(&arg0, &arg1, &arg2, &arg3, &arg4, &arg5, &arg6, &arg7, &arg8);
             break;
         }

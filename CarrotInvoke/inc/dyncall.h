@@ -25,7 +25,7 @@ extern "C"
 
     #define DYNCALL_VERSION		        "1.1.0"
 
-    #define DYNCALL_DEBUG               0
+    #define DYNCALL_DEBUG               1
     #define DYNCALL_FUNC_SIG            0
 
 
@@ -108,6 +108,7 @@ extern "C"
 
     function_info_t* get_func_by_name(function_group_t* group, char* name);
     void invoke(function_group_t* group, char* cmd, ...);
+    void invoke_by_cmd(function_group_t* group, dynpool_t* pool);
     void invoke_by_pool(dynpool_t* pool, function_info_t* f);
 
 
