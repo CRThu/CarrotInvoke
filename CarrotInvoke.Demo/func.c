@@ -12,34 +12,28 @@ const function_group_t default_func_group =
     )
 };
 
-char dynamic_call_buf[256];
-
 void print_hello()
 {
     PRINT_FUNC_SIGNATURE();
-    sprintf(dynamic_call_buf, "print_hello() Called.");
-    puts(dynamic_call_buf);
+    printf("print_hello() Called.");
 }
 
 void print_dec(dyn_dec64p_t a)
 {
     PRINT_FUNC_SIGNATURE();
-    sprintf(dynamic_call_buf, "print_dec(%"PRId64") Called.", PVAL(a));
-    puts(dynamic_call_buf);
+    printf("print_dec(%"PRId64") Called.", PVAL(a));
 }
 
 void print_hex(dyn_hex64p_t a)
 {
     PRINT_FUNC_SIGNATURE();
-    sprintf(dynamic_call_buf, "print_hex(0x%"PRIX64") Called.", PVAL(a));
-    puts(dynamic_call_buf);
+    printf("print_hex(0x%"PRIX64") Called.", PVAL(a));
 }
 
 void print_string(dyn_string_t a)
 {
     PRINT_FUNC_SIGNATURE();
-    sprintf(dynamic_call_buf, "print_string(%s) Called.", a);
-    puts(dynamic_call_buf);
+    printf("print_string(%s) Called.", a);
 }
 
 ret_dec64_t print_add(dyn_dec64p_t a, dyn_dec64p_t b)

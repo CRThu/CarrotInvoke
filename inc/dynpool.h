@@ -138,8 +138,8 @@ extern "C"
 
     dynpool_status_t dynpool_init(dynpool_t* pool);
     dynpool_status_t dynpool_set(dynpool_t* pool, dtypes_t intype, void* indata, uint16_t len);
-    dynpool_status_t dynpool_get(dynpool_t* pool, dtypes_t type, void* data, uint16_t len);
-    dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t len);
+    dynpool_status_t dynpool_get(dynpool_t* pool, dtypes_t type, void* data, uint16_t size, uint16_t* used_size);
+    dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t size, uint16_t* used_size);
 
     void dynpool_print(dynpool_t* pool);
 

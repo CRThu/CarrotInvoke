@@ -72,15 +72,15 @@ dynpool_status_t dynpool_set(dynpool_t* pool, dtypes_t intype, void* indata, uin
 /// <param name="pool">存储结构</param>
 /// <param name="type">类型</param>
 /// <param name="data">数据指针</param>
-/// <param name="len">数据长度</param>
+/// <param name="size">数据长度</param>
+/// <param name="used_size">实际使用数据长度</param>
 /// <returns>返回状态</returns>
-dynpool_status_t dynpool_get(dynpool_t* pool, dtypes_t type, void* data, uint16_t len)
+dynpool_status_t dynpool_get(dynpool_t* pool, dtypes_t type, void* data, uint16_t size, uint16_t* used_size)
 {
     if (pool->rd_count >= pool->wr_count)   return DYNPOOL_ERR_NO_DATA;
 
     dyn_info_t* ele = &pool->elements[pool->rd_count];
-    uint16_t used_size;
-    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, len, &used_size);
+    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, size, &used_size);
     pool->rd_count++;
 
     return DYNPOOL_NO_ERROR;
@@ -93,15 +93,15 @@ dynpool_status_t dynpool_get(dynpool_t* pool, dtypes_t type, void* data, uint16_
 /// <param name="index">数据索引</param>
 /// <param name="type">类型</param>
 /// <param name="data">数据指针</param>
-/// <param name="len">数据长度</param>
+/// <param name="size">数据长度</param>
+/// <param name="used_size">实际使用数据长度</param>
 /// <returns>返回状态</returns>
-dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t len)
+dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t size, uint16_t* used_size)
 {
     if (index >= pool->wr_count)   return DYNPOOL_ERR_NO_DATA;
 
     dyn_info_t* ele = &pool->elements[index];
-    uint16_t used_size;
-    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, len, &used_size);
+    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, size, &used_size);
 
     return DYNPOOL_NO_ERROR;
 }
@@ -147,6 +147,7 @@ void dynpool_print(dynpool_t* pool)
 /// <param name="outtype">输出数据类型</param>
 /// <param name="input_size">输入数据长度</param>
 /// <param name="output_size">输出数据长度</param>
+/// <param name="used_size">实际使用数据长度</param>
 /// <returns>返回状态</returns>
 dynpool_status_t dtype_conversion(const void* input, void* output, dtypes_t intype, dtypes_t outtype, uint16_t input_size, uint16_t output_size, uint16_t* used_size)
 {

@@ -21,11 +21,12 @@ void dynpool_internal_test()
 
     dynpool_print(&pool);
 
-    dynpool_get(&pool, T_STRING, str, sizeof(str));
+    uint16_t used_size;
+    dynpool_get(&pool, T_STRING, str, sizeof(str), &used_size);
     printf("[DYNPOOL GET]: %s\n", str);
-    dynpool_get(&pool, T_DEC64, &dec, sizeof(dec));
+    dynpool_get(&pool, T_DEC64, &dec, sizeof(dec), &used_size);
     printf("[DYNPOOL GET]: %lld\n", dec);
-    dynpool_get(&pool, T_STRING, str, sizeof(str));
+    dynpool_get(&pool, T_STRING, str, sizeof(str), &used_size);
     printf("[DYNPOOL GET]: %s\n", str);
 
 
@@ -69,8 +70,11 @@ int main()
     function_info_t* add = get_func_by_name(&default_func_group, "print_add");
     if (hello == NULL) printf("print_hello() not found");
     if (add == NULL) printf("print_add() not found");
+    int64_t a = 123;
+    int64_t b = 456;
 
     invoke_by_cmd(&default_func_group, "print_hello");
+    invoke_by_cmd(&default_func_group, "print_add", &a, &b);
 
     /*
     invoke_test(&pool);
