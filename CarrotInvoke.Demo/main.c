@@ -1,6 +1,6 @@
 #include "func.h"
-//#include "../inc/dynamic_pool.h"
-#include "../inc/dynamic_call.h"
+//#include "dynpool.h"
+#include "dyncall.h"
 //#include "../inc/cmd_parse.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +20,7 @@ void dynpool_internal_test()
     dynpool_set(&pool, T_DEC64, &dec, sizeof(dec));
     printf("[dynpool set]: %lld\n", dec);
 
-    #if(DYNAMIC_CALL_DEBUG)
+    #if(DYNCALL_DEBUG)
     dynpool_print(&pool);
     #endif
 

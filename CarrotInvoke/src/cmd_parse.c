@@ -3,7 +3,7 @@
 /// <summary>
 /// 解析指令
 /// </summary>
-/// <param name="pool">dynamic_pool_t结构体</param>
+/// <param name="pool">dynpool_t结构体</param>
 /// <param name="cmd">待解析的指令字符串</param>
 /// <param name="len">指令字符串长度</param>
 /// <returns>解析状态</returns>
@@ -28,7 +28,7 @@ cmd_parse_status_t cmd_parse_one(dynpool_t* pool, char* cmd, uint16_t len)
 /// <summary>
 /// 指令参数解析
 /// </summary>
-/// <param name="pool">dynamic_pool_t结构体</param>
+/// <param name="pool">dynpool_t结构体</param>
 /// <param name="cmd">待解析的参数字符串</param>
 /// <param name="len">参数字符串长度</param>
 /// <returns>解析状态</returns>

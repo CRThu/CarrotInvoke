@@ -20,7 +20,7 @@ extern "C"
 {
     #endif
 
-    #define DYNAMIC_POOL_VERSION        "1.1.0"
+    #define DYNPOOL_VERSION             "1.1.0"
 
 
     #define DYNPOOL_MAX_BYTES           1024

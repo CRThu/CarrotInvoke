@@ -26,7 +26,7 @@
     <ClInclude Include="func.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CarrotInvoke.vcxproj">
+    <ProjectReference Include="..\CarrotInvoke\CarrotInvoke.vcxproj">
       <Project>{4ae94cc6-958b-43a6-883b-5150db58d1c1}</Project>
     </ProjectReference>
   </ItemGroup>

@@ -18,7 +18,7 @@
     <ClInclude Include="inc\cmd_parse.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="inc\dynamic_call.h">
+    <ClInclude Include="inc\dyncall.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="inc\dynpool.h">
@@ -29,7 +29,7 @@
     <ClCompile Include="src\cmd_parse.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\dynamic_call.c">
+    <ClCompile Include="src\dyncall.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\dynpool.c">

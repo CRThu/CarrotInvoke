@@ -1,7 +1,4 @@
 #include "pch.h"
-#include "CppUnitTest.h"
-#include "../inc/dynamic_call.h"
-#include "../inc/cmd_parse.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

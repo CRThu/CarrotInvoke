@@ -1,4 +1,4 @@
-#include "../Inc/dynamic_call.h"
+#include "dyncall.h"
 
 /// <summary>
 /// 获取函数
@@ -78,7 +78,7 @@ void invoke(function_group_t* group, char* cmd, ...)
 
     va_end(args);
 
-    #if(DYNAMIC_CALL_DEBUG)
+    #if(DYNCALL_DEBUG)
     dynpool_print(&pool);
     #endif
 
@@ -107,7 +107,7 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
     for (uint8_t i = 0; i < GET_FUNC_ARGS_COUNT(f); i++)
     {
         uint16_t used_size = 0;
-        uint8_t arg_buffer[DYNAMIC_CALL_ARGS_MAX_SIZE];
+        uint8_t arg_buffer[DYNCALL_ARGS_MAX_SIZE];
 
         // 从原始pool读取参数
         dynpool_status_t status = dynpool_get(pool, f->args_type[i], arg_buffer, sizeof(arg_buffer), &used_size);
@@ -122,7 +122,7 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
         dynpool_set(&arg_pool, f->args_type[i], arg_buffer, used_size);
     }
 
-    #if(DYNAMIC_CALL_DEBUG)
+    #if(DYNCALL_DEBUG)
     dynpool_print(&arg_pool);
     #endif
 

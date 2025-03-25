@@ -11,7 +11,7 @@ extern "C"
 {
 #endif
 
-    #include "../inc/dynamic_call.h"
+    #include "dyncall.h"
 
     extern const function_group_t default_func_group;
 

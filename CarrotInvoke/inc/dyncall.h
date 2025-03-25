@@ -1,11 +1,11 @@
 /****************************
-* DYNAMIC CALL
+* DYNCALL
 * CARROT HU
 * 2024.09.04
 *****************************/
 #pragma once
-#ifndef _DYNAMIC_CALL_H_
-#define _DYNAMIC_CALL_H_
+#ifndef _DYNCALL_H_
+#define _DYNCALL_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -20,17 +20,17 @@ extern "C"
     #include <inttypes.h>
     #include <stdio.h>
     #include <stdarg.h>
-    #include "../Inc/dynpool.h"
+    #include "dynpool.h"
 
-    #define DYNAMIC_CALL_VERSION		"1.1.0"
+    #define DYNCALL_VERSION		        "1.1.0"
 
-    #define DYNAMIC_CALL_DEBUG          0
-    #define DYNAMIC_CALL_FUNC_SIG       0
+    #define DYNCALL_DEBUG               0
+    #define DYNCALL_FUNC_SIG            0
 
 
-    #define DYNAMIC_CALL_FUNC_MAX_CNT	256
-    #define DYNAMIC_CALL_ARGS_MAX_CNT	9
-    #define DYNAMIC_CALL_ARGS_MAX_SIZE  64
+    #define DYNCALL_FUNC_MAX_CNT        256
+    #define DYNCALL_ARGS_MAX_CNT	    9
+    #define DYNCALL_ARGS_MAX_SIZE       64
 
     #define NAME_ISEQUAL(a,b)			(strcmp(a, b) == 0)
     #define FN_ARGS_CNT(args)			(strlen(args))
@@ -64,7 +64,7 @@ extern "C"
         char* name;
         delegate handler;
         dtypes_t ret_type;
-        dtypes_t args_type[DYNAMIC_CALL_ARGS_MAX_CNT];
+        dtypes_t args_type[DYNCALL_ARGS_MAX_CNT];
         uint8_t args_count;
     } function_info_t;
 
@@ -99,7 +99,7 @@ extern "C"
     #define FUNC_SIGNATURE __func__
     #endif
 
-    #if(DYNAMIC_CALL_FUNC_SIG)
+    #if(DYNCALL_FUNC_SIG)
     #define PRINT_FUNC_SIGNATURE()  printf("[funcsig]: %s\n", FUNC_SIGNATURE)
     #else
     #define PRINT_FUNC_SIGNATURE()  void
@@ -114,4 +114,4 @@ extern "C"
 }
 #endif
 
-#endif /* _DYNAMIC_CALL_H_ */
+#endif /* _DYNCALL_H_ */

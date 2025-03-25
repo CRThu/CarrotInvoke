@@ -1,6 +1,4 @@
 #include "pch.h"
-#include "CppUnitTest.h"
-#include "../inc/dynamic_pool.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
