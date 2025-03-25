@@ -21,6 +21,7 @@ extern "C"
     #include <stdio.h>
     #include <stdarg.h>
     #include "dynpool.h"
+    #include "cmdparse.h"
 
     #define DYNCALL_VERSION		        "1.1.0"
 

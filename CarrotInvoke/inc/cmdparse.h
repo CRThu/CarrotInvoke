@@ -20,20 +20,21 @@ extern "C"
     #include <string.h>
     #include <stdlib.h>
     #include <stdio.h>
-    #include <string.h>
+    #include <stdbool.h>
     #include "dynpool.h"
 
     #define CMD_PARSE_VERSION                   "1.1.0"
 
-    #define CMD_PARSE_ELEMENT_DELIMITER(c)		(c == '(' || c == ',' || c == ')' || c == ';' )
-    #define CMD_PARSE_CHAR_IGNORE(c)            (c == ' ' || c == '\t' || c == '\r')
-    #define CMD_PARSE_END(c)                    (c == '\n' || c == '\0')
+    typedef enum
+    {
+        CMDPARSE_OK = 0,
+        CMDPARSE_INVALID_FORMAT = -1,
+        CMDPARSE_EMPTY_STRING = -2,
+        CMD_PARSE_POOL_ERROR = -3
+    } cmd_parse_status_t;
 
-    typedef int8_t cmd_parse_status_t;
-
-    cmd_parse_status_t cmdparse_from_string(dynpool_t* pool, char* cmd, uint16_t* cmd_size);
-    cmd_parse_status_t cmdparse_from_buffer(dynpool_t* pool, uint8_t* cmdbuf, uint16_t offset, uint16_t size, uint16_t* cmd_size);
-
+    cmd_parse_status_t cmdparse_from_buffer(dynpool_t* pool, const uint8_t* buf, uint16_t offset, uint16_t size, uint16_t* len);
+    cmd_parse_status_t cmdparse_from_string(dynpool_t* pool, const char* str, uint16_t* len);
 
     #ifdef __cplusplus
 }

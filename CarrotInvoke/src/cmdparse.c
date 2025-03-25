@@ -1,45 +1,86 @@
 #include "cmdparse.h"
 
-
-cmd_parse_status_t cmdparse_from_string(dynpool_t* pool, char* cmd, uint16_t* cmd_size)
+typedef enum
 {
-    cmdparse_from_buffer(pool);
+    STATE_FUNC,    // 解析函数名
+    STATE_ARGS     // 解析参数
+} parse_state_t;
+
+static inline bool is_whitespace(char c)
+{
+    return c == ' ' || c == '\t' || c == '\r';
 }
 
-/// <summary>
-/// 解析指令
-/// </summary>
-/// <param name="pool">dynpool_t结构体</param>
-/// <param name="cmdbuf">指令缓冲区</param>
-/// <param name="offset">指令缓冲区偏移量</param>
-/// <param name="size">指令缓冲区总长度</param>
-/// <param name="cmd_size">解析字符串长度</param>
-/// <returns>解析状态</returns>
-cmd_parse_status_t cmdparse_from_buffer(dynpool_t* pool, uint8_t* cmdbuf, uint16_t offset, uint16_t size, uint16_t* cmd_size)
+static inline bool is_terminator(char c)
 {
-    uint8_t args_index = 0;
-    uint16_t cursor = 0;
-    uint16_t start_pos = 0;
-    dynpool_init(pool);
-    while (cursor < size)
+    return c == '\n' || c == '\0' || c == ';';
+}
+
+static void store_token(dynpool_t* pool, const char* start, uint16_t len)
+{
+    // 去除两端空白
+    while (len > 0 && is_whitespace(*start)) { start++; len--; }
+    while (len > 0 && is_whitespace(start[len - 1])) { len--; }
+
+    if (len > 0 || pool->wr_count > 1)
     {
-        if (CMD_PARSE_END(cmdbuf[cursor]))
+        // 允许空参数但跳过函数名前空白
+        dynpool_set(pool, T_STRING, start, len);
+    }
+}
+
+cmd_parse_status_t cmdparse_from_buffer(dynpool_t* pool, const uint8_t* buf,
+                                        uint16_t offset, uint16_t size, uint16_t* len)
+{
+    parse_state_t state = STATE_FUNC;
+    uint16_t start = offset, depth = 0;
+    bool has_func = false;
+
+    dynpool_init(pool);
+
+    for (uint16_t i = offset; i < offset + size; i++)
+    {
+        char c = buf[i];
+
+        if (is_whitespace(c)) continue;
+        if (is_terminator(c)) { *len = i - offset; break; }
+
+        switch (state)
         {
-            break;
+            case STATE_FUNC:
+                if (c == '(')
+                {
+                    store_token(pool, (char*)&buf[start], i - start);
+                    state = STATE_ARGS;
+                    start = i + 1;
+                    has_func = true;
+                }
+                break;
+
+            case STATE_ARGS:
+                if (c == '(') depth++;
+                else if (c == ')')
+                {
+                    if (depth-- == 0)
+                    {
+                        store_token(pool, (char*)&buf[start], i - start);
+                        *len = i - offset + 1;
+                        return has_func ? CMDPARSE_OK : CMDPARSE_INVALID_FORMAT;
+                    }
+                }
+                else if (depth == 0 && c == ',')
+                {
+                    store_token(pool, (char*)&buf[start], i - start);
+                    start = i + 1;
+                }
+                break;
         }
-
-        if (CMD_PARSE_ELEMENT_DELIMITER(cmdbuf[cursor]))
-        {
-            char* indata = &cmdbuf[start_pos];
-            uint16_t inlen = cursor - start_pos;
-
-            dynpool_set(pool, T_STRING, indata, inlen);
-
-            args_index++;
-            start_pos = cursor + 1;
-        }
-        cursor++;
     }
 
-    return 0;
+    return (has_func && state == STATE_ARGS && depth == 0) ? CMDPARSE_OK : CMDPARSE_INVALID_FORMAT;
+}
+
+cmd_parse_status_t cmdparse_from_string(dynpool_t* pool, const char* str, uint16_t* len)
+{
+    return cmdparse_from_buffer(pool, (uint8_t*)str, 0, (uint16_t)strlen(str), len);
 }
