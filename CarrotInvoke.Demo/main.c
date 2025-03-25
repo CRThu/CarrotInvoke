@@ -3,81 +3,71 @@
 #include "../inc/dynamic_call.h"
 //#include "../inc/cmd_parse.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void dynpool_internal_test()
 {
-    printf("----- DYNPOOL INTERNAL TEST -----\r\n");
+    printf("--------------- DYNPOOL INTERNAL TEST ---------------\r\n");
     dynpool_t pool;
     int64_t dec = 'X';
     uint8_t str[100];
 
     dynpool_init(&pool);
     dynpool_set(&pool, T_STRING, "HELLOWORLD", sizeof("HELLOWORLD"));
-    printf("[DYNPOOL SET]: %s\n", "HELLOWORLD");
+    printf("[dynpool set]: %s\n", "HELLOWORLD");
     dynpool_set(&pool, T_STRING, "123", sizeof("123"));
-    printf("[DYNPOOL SET]: %s\n", "123");
+    printf("[dynpool set]: %s\n", "123");
     dynpool_set(&pool, T_DEC64, &dec, sizeof(dec));
-    printf("[DYNPOOL SET]: %lld\n", dec);
+    printf("[dynpool set]: %lld\n", dec);
 
+    #if(DYNAMIC_CALL_DEBUG)
     dynpool_print(&pool);
+    #endif
 
     uint16_t used_size;
     dynpool_get(&pool, T_STRING, str, sizeof(str), &used_size);
-    printf("[DYNPOOL GET]: %s\n", str);
+    printf("[dynpool get]: %s\n", str);
     dynpool_get(&pool, T_DEC64, &dec, sizeof(dec), &used_size);
-    printf("[DYNPOOL GET]: %lld\n", dec);
+    printf("[dynpool get]: %lld\n", dec);
     dynpool_get(&pool, T_STRING, str, sizeof(str), &used_size);
-    printf("[DYNPOOL GET]: %s\n", str);
+    printf("[dynpool get]: %s\n", str);
 
 
 }
 
-/*
-void invoke_test(dynamic_pool_t* pool)
+void invoke_test()
 {
-    invoke(pool, &(delegates[0]));
-    invoke(pool, &(delegates[1]));
-    invoke(pool, &(delegates[2]));
-    invoke(pool, &(delegates[3]));
+    printf("--------------- INVOKE TEST ---------------\r\n");
+    function_info_t* hello = get_func_by_name(&default_func_group, "print_hello");
+    function_info_t* add = get_func_by_name(&default_func_group, "print_add");
+    if (hello == NULL)
+        printf("print_hello() not found\n");
+    else
+        printf("print_hello() found\n");
+    if (add == NULL)
+        printf("print_add() not found\n");
+    else
+        printf("print_add() found\n");
+
 }
 
-void dyncall_test(dynamic_pool_t* pool)
+void dyncall_test()
 {
-    char s[256];
+    printf("--------------- DYNCALL TEST ---------------\r\n");
+    int64_t a = 123;
+    int64_t b = 456;
+    char* str = "test string";
 
-    dynamic_pool_init(pool);
-    printf("\nWrite a command to execute:");
-    scanf("%s", &s);
-    cmd_parse_one(pool, s, 256);
-
-    char funcname[256];
-    dynamic_pool_get(pool, 0, T_STRING, funcname, 256);
-    delegate_t* sel = find_delegate_by_name(delegates, delegates_count, funcname);
-
-    printf("found function: %s\n", sel->name);
-
-    invoke(pool, sel);
+    invoke(&default_func_group, "print_hello");
+    invoke(&default_func_group, "print_add", a, b);
+    invoke(&default_func_group, "print_string", str);
+    invoke(&default_func_group, "print_dec", (int64_t)123456789);
+    invoke(&default_func_group, "print_hex", (uint64_t)0xABCDEF);
 }
-
-*/
-
 
 int main()
 {
     dynpool_internal_test();
-
-    function_info_t* hello = get_func_by_name(&default_func_group, "print_hello");
-    function_info_t* add = get_func_by_name(&default_func_group, "print_add");
-    if (hello == NULL) printf("print_hello() not found");
-    if (add == NULL) printf("print_add() not found");
-    int64_t a = 123;
-    int64_t b = 456;
-
-    invoke_by_cmd(&default_func_group, "print_hello");
-    invoke_by_cmd(&default_func_group, "print_add", &a, &b);
-
-    /*
-    invoke_test(&pool);
-    dyncall_test(&pool);
-    */
+    invoke_test();
+    dyncall_test();
 }

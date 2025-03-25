@@ -10,34 +10,41 @@
 #ifdef __cplusplus
 extern "C"
 {
-#endif
+    #endif
 
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif // !_CRT_SECURE_NO_WARNINGS
-
-
-#include <inttypes.h>
-#include <stdio.h>
-#include "../Inc/dynpool.h"
-
-#define DYNAMIC_CALL_VERSION		"1.1.0"
-
-#define DYNAMIC_CALL_FUNC_MAX_CNT	256
-#define DYNAMIC_CALL_ARGS_MAX_CNT	9
-
-#define NAME_ISEQUAL(a,b)			(strcmp(a, b) == 0)
-#define FN_ARGS_CNT(args)			(strlen(args))
+    #ifndef _CRT_SECURE_NO_WARNINGS
+    #define _CRT_SECURE_NO_WARNINGS
+    #endif // !_CRT_SECURE_NO_WARNINGS
 
 
-#define PVAL(p)						(*(p))
+    #include <inttypes.h>
+    #include <stdio.h>
+    #include <stdarg.h>
+    #include "../Inc/dynpool.h"
+
+    #define DYNAMIC_CALL_VERSION		"1.1.0"
+
+    #define DYNAMIC_CALL_DEBUG          0
+    #define DYNAMIC_CALL_FUNC_SIG       0
+
+
+    #define DYNAMIC_CALL_FUNC_MAX_CNT	256
+    #define DYNAMIC_CALL_ARGS_MAX_CNT	9
+    #define DYNAMIC_CALL_ARGS_MAX_SIZE  64
+
+    #define NAME_ISEQUAL(a,b)			(strcmp(a, b) == 0)
+    #define FN_ARGS_CNT(args)			(strlen(args))
+
+
+    #define PVAL(p)						(**(p))
+    #define PREF(p)						(*(p))
 
     typedef int64_t ret_dec64_t;
-    typedef int64_t* dyn_dec64p_t;
-    typedef uint64_t* dyn_hex64p_t;
-    typedef uint64_t* dyn_enump_t;
-    typedef char* dyn_string_t;
-    typedef uint8_t* dyn_bytes_t;
+    typedef int64_t** dyn_dec64p_t;
+    typedef uint64_t** dyn_hex64p_t;
+    typedef uint64_t** dyn_enump_t;
+    typedef char** dyn_string_t;
+    typedef uint8_t** dyn_bytes_t;
 
 
     typedef void* delegate;
@@ -52,7 +59,8 @@ extern "C"
     typedef void (*delegate_a8r0)(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6, void* arg7, void* arg8);
     typedef void (*delegate_a9r0)(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6, void* arg7, void* arg8, void* arg9);
 
-    typedef struct {
+    typedef struct
+    {
         char* name;
         delegate handler;
         dtypes_t ret_type;
@@ -60,41 +68,49 @@ extern "C"
         uint8_t args_count;
     } function_info_t;
 
-    typedef struct {
+    typedef struct
+    {
         char* name;
         function_info_t* func_table;
         uint16_t func_count;
     } function_group_t;
 
-#define FUNCTION_GROUP(NAME, ...)                                                       \
+    #define FUNCTION_GROUP(NAME, ...)                                                   \
     .name = NAME,                                                                       \
     .func_table = (function_info_t[]) { __VA_ARGS__ },                                  \
     .func_count = sizeof((function_info_t[]) { __VA_ARGS__ }) / sizeof(function_info_t) \
 
-#define FUNCTION_INFO(HANDLER, RET, ...) {                                              \
+    #define FUNCTION_INFO(HANDLER, RET, ...) {                                          \
     .name = #HANDLER,                                                                   \
     .handler = HANDLER,                                                                 \
     .ret_type = RET,                                                                    \
     .args_type = { __VA_ARGS__ },                                                       \
     .args_count = sizeof((dtypes_t[]) { __VA_ARGS__ }) / sizeof(dtypes_t)               \
-}
+    }
 
-#if defined(__GNUC__) || defined(__clang__)
-#define FUNC_SIGNATURE __PRETTY_FUNCTION__
-#elif defined(_MSC_VER)
-#define FUNC_SIGNATURE __FUNCSIG__
-#else
-#define FUNC_SIGNATURE __func__
-#endif
+    // check if func args is only one and type is void for msvc
+    #define GET_FUNC_ARGS_COUNT(f)     (((f)->args_count == 1 && (f)->args_type[0] == T_VOID) ? 0 : (f)->args_count)
 
-#define PRINT_FUNC_SIGNATURE()  printf("[function signature]: %s\n", FUNC_SIGNATURE)
+    #if defined(__GNUC__) || defined(__clang__)
+    #define FUNC_SIGNATURE __PRETTY_FUNCTION__
+    #elif defined(_MSC_VER)
+    #define FUNC_SIGNATURE __FUNCSIG__
+    #else
+    #define FUNC_SIGNATURE __func__
+    #endif
+
+    #if(DYNAMIC_CALL_FUNC_SIG)
+    #define PRINT_FUNC_SIGNATURE()  printf("[funcsig]: %s\n", FUNC_SIGNATURE)
+    #else
+    #define PRINT_FUNC_SIGNATURE()  void
+    #endif
 
     function_info_t* get_func_by_name(function_group_t* group, char* name);
-    void invoke_by_cmd(function_group_t* group, char* cmd);
-    void invoke(function_info_t* f);
+    void invoke(function_group_t* group, char* cmd, ...);
+    void invoke_by_pool(dynpool_t* pool, function_info_t* f);
 
 
-#ifdef __cplusplus
+    #ifdef __cplusplus
 }
 #endif
 

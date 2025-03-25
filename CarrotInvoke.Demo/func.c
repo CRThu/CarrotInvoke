@@ -15,29 +15,30 @@ const function_group_t default_func_group =
 void print_hello()
 {
     PRINT_FUNC_SIGNATURE();
-    printf("print_hello() Called.");
+    printf("[info]: print_hello() Called.\r\n");
 }
 
 void print_dec(dyn_dec64p_t a)
 {
     PRINT_FUNC_SIGNATURE();
-    printf("print_dec(%"PRId64") Called.", PVAL(a));
+    printf("[info]: print_dec(%"PRId64") Called.\r\n", PVAL(a));
 }
 
 void print_hex(dyn_hex64p_t a)
 {
     PRINT_FUNC_SIGNATURE();
-    printf("print_hex(0x%"PRIX64") Called.", PVAL(a));
+    printf("[info]: print_hex(0x%"PRIX64") Called.\r\n", PVAL(a));
 }
 
 void print_string(dyn_string_t a)
 {
     PRINT_FUNC_SIGNATURE();
-    printf("print_string(%s) Called.", a);
+    printf("[info]: print_string(%s) Called.\r\n", PREF(a));
 }
 
 ret_dec64_t print_add(dyn_dec64p_t a, dyn_dec64p_t b)
 {
     PRINT_FUNC_SIGNATURE();
+    printf("[info]: print_add(%"PRId64", %"PRId64") Called.\r\n", PVAL(a), PVAL(b));
     return PVAL(a) + PVAL(b);
 }

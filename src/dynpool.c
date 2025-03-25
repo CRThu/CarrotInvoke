@@ -80,28 +80,28 @@ dynpool_status_t dynpool_get(dynpool_t* pool, dtypes_t type, void* data, uint16_
     if (pool->rd_count >= pool->wr_count)   return DYNPOOL_ERR_NO_DATA;
 
     dyn_info_t* ele = &pool->elements[pool->rd_count];
-    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, size, &used_size);
+    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, size, used_size);
     pool->rd_count++;
 
     return DYNPOOL_NO_ERROR;
 }
-
 /// <summary>
-/// 按index随机读取元素
+/// 获取缓冲区内元素
 /// </summary>
 /// <param name="pool">存储结构</param>
 /// <param name="index">数据索引</param>
 /// <param name="type">类型</param>
 /// <param name="data">数据指针</param>
 /// <param name="size">数据长度</param>
-/// <param name="used_size">实际使用数据长度</param>
 /// <returns>返回状态</returns>
-dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t type, void* data, uint16_t size, uint16_t* used_size)
+dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t* type, void** data, uint16_t* size)
 {
     if (index >= pool->wr_count)   return DYNPOOL_ERR_NO_DATA;
 
     dyn_info_t* ele = &pool->elements[index];
-    dtype_conversion(&pool->buf[ele->offset], data, ele->type, type, ele->len, size, &used_size);
+    *type = ele->type;
+    *data = &pool->buf[ele->offset];
+    *size = ele->len;
 
     return DYNPOOL_NO_ERROR;
 }
