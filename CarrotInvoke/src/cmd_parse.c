@@ -1,4 +1,4 @@
-#include "../Inc/cmd_parse.h"
+#include "cmdcall.h"
 
 /// <summary>
 /// 解析指令
@@ -14,7 +14,7 @@ cmd_parse_status_t cmd_parse_one(dynpool_t* pool, char* cmd, uint16_t len)
 
     while (curr_pos < len)
     {
-        if (CMD_PARSE_END(cmd[curr_pos]))
+        if (CMDCALL_END(cmd[curr_pos]))
         {
             statement_end_pos = curr_pos;
             parse_params(pool, cmd, len);
@@ -40,7 +40,7 @@ cmd_parse_status_t parse_params(dynpool_t* pool, char* cmd, uint16_t len)
     dynpool_init(pool);
     while (cursor < len)
     {
-        if (CMD_PARSE_ELEMENT_DELIMITER(cmd[cursor]))
+        if (CMDCALL_ELEMENT_DELIMITER(cmd[cursor]))
         {
             char* fromele = &cmd[start_pos];
             uint16_t fromlen = cursor - start_pos;

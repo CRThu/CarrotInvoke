@@ -10,7 +10,7 @@
 // 添加要在此处预编译的标头
 #include "dynpool.h"
 #include "dyncall.h"
-#include "cmd_parse.h"
+#include "cmdcall.h"
 #include "CppUnitTest.h"
 
 #endif //PCH_H

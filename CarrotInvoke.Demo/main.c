@@ -1,7 +1,5 @@
 #include "func.h"
-//#include "dynpool.h"
-#include "dyncall.h"
-//#include "../inc/cmd_parse.h"
+#include "cmdcall.h"
 #include <stdio.h>
 #include <stdlib.h>
 
