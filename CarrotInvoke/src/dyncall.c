@@ -27,7 +27,7 @@ void invoke(function_group_t* group, char* fname, ...)
     function_info_t* f = get_func_by_name(group, fname);
     if (f == NULL)
     {
-        printf("Function '%s' not found\n", fname);
+        printf("[ERROR]: Function '%s' not found\n", fname);
         return;
     }
 
@@ -90,7 +90,7 @@ void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 {
     if (group == NULL || pool == NULL)
     {
-        printf("Invalid group or pool\n");
+        printf("[ERROR]: Invalid group or pool.\n");
         return;
     }
 
@@ -104,14 +104,14 @@ void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 
     if (status != DYNPOOL_NO_ERROR)
     {
-        printf("Failed to get function name from pool\n");
+        printf("[ERROR]: Failed to get function '%s' from pool.\n", fname_buf);
         return;
     }
 
     function_info_t* f = get_func_by_name(group, fname_buf);
     if (f == NULL)
     {
-        printf("Function '%s' not found\n", fname_buf);
+        printf("[ERROR]: Function '%s' not found.\n", fname_buf);
         return;
     }
 
@@ -127,7 +127,7 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
 {
     if (f == NULL || pool == NULL)
     {
-        printf("Invalid function or pool\n");
+        printf("[ERROR]: Invalid function or pool\n");
         return;
     }
 
@@ -149,11 +149,11 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
         {
             if (status == DYNPOOL_ERR_NO_DATA)
             {
-                printf("Warning: No data at argument %d\n", i);
+                printf("[WARNING]: No data at argument %d\n", i);
             }
             else
             {
-                printf("Failed to get argument %d\n", i);
+                printf("[ERROR]: Failed to get argument %d\n", i);
                 return;
             }
         }
@@ -279,7 +279,7 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
         default:
         {
 
-            printf("Unsupported argument count: %d\n", f->args_count);
+            printf("[ERROR]: Unsupported argument count: %d\n", f->args_count);
             break;
         }
     }

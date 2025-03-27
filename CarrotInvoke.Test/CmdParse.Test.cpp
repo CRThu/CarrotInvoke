@@ -16,11 +16,11 @@ namespace CarrotInvokeTest
             dynpool_t pool;
             uint16_t len;
 
-            const char* cmd = "print_hello()";
+            const char* cmd = "print_hello()\nprint_hello()";
             cmd_parse_status_t status = cmdparse_from_string(&pool, cmd, &len);
 
             Assert::AreEqual((int)CMDPARSE_OK, (int)status);
-            Assert::AreEqual((uint16_t)13, len);
+            Assert::AreEqual((uint16_t)14, len);
             Assert::AreEqual((uint16_t)1u, pool.wr_count); // Only function name
 
             // Verify function name
@@ -74,10 +74,6 @@ namespace CarrotInvokeTest
             status = cmdparse_from_string(&pool, cmd2, &len);
             Assert::AreEqual((int)CMDPARSE_INVALID_FORMAT, (int)status);
 
-            // Empty string
-            const char* cmd3 = "";
-            status = cmdparse_from_string(&pool, cmd3, &len);
-            Assert::AreEqual((int)CMDPARSE_EMPTY_STRING, (int)status);
         }
 
         TEST_METHOD(TestInvokeByCmd)

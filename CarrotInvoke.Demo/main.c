@@ -66,14 +66,33 @@ void dyncall_test()
 void cmdparse_test()
 {
     printf("--------------- CMDPARSE TEST ---------------\r\n");
-    // 解析复杂案例
-    const char* code = "print_args(1,2,3);";
+
+    const char* code[] = {
+        "print_args(1)",
+        "print_args(1,2,3)",
+        "print_args(1,2,3,4)",
+        "print_args ( 1, 2 , 3 )",
+        "print_args;1;2;3;",
+        "print_args ; 1 ; 2 ; 3 ; ",
+        "print_args(",
+        "",
+        "print_hello()\nprint_hello()",
+    };
     dynpool_t pool;
     uint16_t len;
 
-    if (cmdparse_from_string(&pool, code, &len) == CMDPARSE_OK)
+    for (int i = 0; i < sizeof(code) / sizeof(char*); i++)
     {
-        invoke_by_cmd(&default_func_group, &pool);
+        if (cmdparse_from_string(&pool, code[i], &len) == CMDPARSE_OK)
+        {
+            printf("[INFO]: cmdparse from string: %s\r\n", code[i]);
+            invoke_by_cmd(&default_func_group, &pool);
+        }
+        else
+        {
+            printf("[ERROR]: cmdparse from string failed: %s\r\n", code[i]);
+        }
+        printf("\r\n");
     }
 }
 
