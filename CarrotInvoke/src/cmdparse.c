@@ -34,7 +34,7 @@ static void store_token(dynpool_t* pool, const char* start, uint16_t len)
     if (len > 0)
     {
         // 允许空参数但跳过函数名前空白
-        dynpool_set(pool, T_STRING, start, len);
+        dynpool_set(pool, T_STRING, (void*)start, len);
     }
 }
 

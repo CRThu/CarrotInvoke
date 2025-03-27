@@ -95,7 +95,7 @@ void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
     }
 
     uint16_t used_size = 0;
-    uint8_t fname_buf[DYNCALL_ARGS_MAX_SIZE];
+    char fname_buf[DYNCALL_ARGS_MAX_SIZE];
     dynpool_status_t status = dynpool_get(pool, T_STRING, fname_buf, sizeof(fname_buf), &used_size);
 
     //#if(DYNCALL_DEBUG)
