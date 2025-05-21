@@ -6,6 +6,7 @@
 #pragma once
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef _DYNPOOL_H_
@@ -20,7 +21,7 @@ extern "C"
 {
     #endif
 
-    #define DYNPOOL_VERSION             "1.1.1"
+    #define DYNPOOL_VERSION             "1.1.2"
 
     #define DYNPOOL_PRINTF              printf
 
