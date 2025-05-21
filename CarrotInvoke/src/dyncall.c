@@ -27,8 +27,8 @@ void invoke(function_group_t* group, char* fname, ...)
     function_info_t* f = get_func_by_name(group, fname);
     if (f == NULL)
     {
-        printf("[ERROR]: Function '%s' not found\n", fname);
-        return;
+        DYNCALL_PRINTF("[ERROR]: Function '%s' not found\n", fname);
+        return DYNCALL_ERR_FUNC_NOT_FOUND;
     }
 
     // 准备参数
@@ -83,15 +83,15 @@ void invoke(function_group_t* group, char* fname, ...)
     #endif
 
     // 调用函数
-    invoke_by_pool(&pool, f);
+    return invoke_by_pool(&pool, f);
 }
 
 void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 {
     if (group == NULL || pool == NULL)
     {
-        printf("[ERROR]: Invalid group or pool.\n");
-        return;
+        DYNCALL_PRINTF("[ERROR]: Invalid group or pool.\n");
+        return DYNCALL_ERR_NULL_OBJECT;
     }
 
     uint16_t used_size = 0;
@@ -104,18 +104,18 @@ void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 
     if (status != DYNPOOL_NO_ERROR)
     {
-        printf("[ERROR]: Failed to get function '%s' from pool.\n", fname_buf);
-        return;
+        DYNCALL_PRINTF("[ERROR]: Failed to get function '%s' from pool.\n", fname_buf);
+        return DYNCALL_ERR_POOL;
     }
 
     function_info_t* f = get_func_by_name(group, fname_buf);
     if (f == NULL)
     {
-        printf("[ERROR]: Function '%s' not found.\n", fname_buf);
-        return;
+        DYNCALL_PRINTF("[ERROR]: Function '%s' not found.\n", fname_buf);
+        return DYNCALL_ERR_FUNC_NOT_FOUND;
     }
 
-    invoke_by_pool(pool, f);
+    return invoke_by_pool(pool, f);
 }
 
 /// <summary>
@@ -123,12 +123,12 @@ void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 /// </summary>
 /// <param name="pool">数据存储结构</param>
 /// <param name="f">函数</param>
-void invoke_by_pool(dynpool_t* pool, function_info_t* f)
+dyncall_status_t invoke_by_pool(dynpool_t* pool, function_info_t* f)
 {
     if (f == NULL || pool == NULL)
     {
-        printf("[ERROR]: Invalid function or pool\n");
-        return;
+        DYNCALL_PRINTF("[ERROR]: Invalid function or pool\n");
+        return DYNCALL_ERR_NULL_OBJECT;
     }
 
     // 创建新的dynpool来存储转换后的参数
@@ -149,12 +149,12 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
         {
             if (status == DYNPOOL_ERR_NO_DATA)
             {
-                printf("[WARNING]: No data at argument %d\n", i);
+                DYNCALL_PRINTF("[WARNING]: No data at argument %d\n", i);
             }
             else
             {
-                printf("[ERROR]: Failed to get argument %d\n", i);
-                return;
+                DYNCALL_PRINTF("[ERROR]: Failed to get argument %d\n", i);
+                return DYNCALL_ERR_POOL;
             }
         }
 
@@ -279,8 +279,9 @@ void invoke_by_pool(dynpool_t* pool, function_info_t* f)
         default:
         {
 
-            printf("[ERROR]: Unsupported argument count: %d\n", f->args_count);
-            break;
+            DYNCALL_PRINTF("[ERROR]: Unsupported argument count: %d\n", f->args_count);
+            return DYNCALL_ERR_INVOKE_UNSUPPORTED;
         }
     }
+    return DYNCALL_NO_ERROR;
 }

@@ -20,8 +20,9 @@ extern "C"
 {
     #endif
 
-    #define DYNPOOL_VERSION             "1.1.0"
+    #define DYNPOOL_VERSION             "1.1.1"
 
+    #define DYNPOOL_PRINTF              printf
 
     #define DYNPOOL_MAX_BYTES           1024
     #define DYNPOOL_MAX_VARS            4

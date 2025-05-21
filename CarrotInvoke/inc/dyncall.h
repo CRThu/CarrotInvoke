@@ -23,15 +23,24 @@ extern "C"
     #include "dynpool.h"
     #include "cmdparse.h"
 
-    #define DYNCALL_VERSION		        "1.1.1"
+    #define DYNCALL_VERSION		        "1.1.2"
 
     #define DYNCALL_DEBUG               1
     #define DYNCALL_FUNC_SIG            0
+    #define DYNCALL_PRINTF              printf
 
 
     #define DYNCALL_FUNC_MAX_CNT        256
     #define DYNCALL_ARGS_MAX_CNT	    9
     #define DYNCALL_ARGS_MAX_SIZE       64
+
+    #define DYNCALL_NO_ERROR                    (0)
+    #define DYNCALL_ERR_FUNC_NOT_FOUND          (-1)
+    #define DYNCALL_ERR_NULL_OBJECT             (-2)
+    #define DYNCALL_ERR_POOL                    (-3)
+    #define DYNCALL_ERR_INVOKE_UNSUPPORTED      (-4)
+
+    typedef int8_t dyncall_status_t;
 
     #define NAME_ISEQUAL(a,b)			(strcmp(a, b) == 0)
     #define FN_ARGS_CNT(args)			(strlen(args))
@@ -101,15 +110,15 @@ extern "C"
     #endif
 
     #if(DYNCALL_FUNC_SIG)
-    #define PRINT_FUNC_SIGNATURE()  printf("[funcsig]: %s\n", FUNC_SIGNATURE)
+    #define PRINT_FUNC_SIGNATURE()  DYNCALL_PRINTF("[funcsig]: %s\n", FUNC_SIGNATURE)
     #else
     #define PRINT_FUNC_SIGNATURE()  void
     #endif
 
     function_info_t* get_func_by_name(function_group_t* group, char* name);
-    void invoke(function_group_t* group, char* cmd, ...);
-    void invoke_by_cmd(function_group_t* group, dynpool_t* pool);
-    void invoke_by_pool(dynpool_t* pool, function_info_t* f);
+    dyncall_status_t invoke(function_group_t* group, char* cmd, ...);
+    dyncall_status_t invoke_by_cmd(function_group_t* group, dynpool_t* pool);
+    dyncall_status_t invoke_by_pool(dynpool_t* pool, function_info_t* f);
 
 
     #ifdef __cplusplus

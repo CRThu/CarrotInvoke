@@ -113,7 +113,7 @@ dynpool_status_t dynpool_peek(dynpool_t* pool, uint16_t index, dtypes_t* type, v
 /// <param name="pool">存储结构</param>
 void dynpool_print(dynpool_t* pool)
 {
-    printf("----- DYNPOOL PRINT -----\r\n");
+    DYNPOOL_PRINTF("----- DYNPOOL PRINT -----\r\n");
     uint8_t outbuf[DYNPOOL_MAX_BYTES];
     char* typename;
     for (uint16_t i = 0; i < pool->wr_count; i++)
@@ -133,9 +133,9 @@ void dynpool_print(dynpool_t* pool)
             case T_JSON:    typename = "T_JSON";    break;
             default:        typename = "T_UNKNWON"; break;
         }
-        printf("DYNPOOL[%2d](TYPE: %-9s): %s\r\n", i, typename, outbuf);
+        DYNPOOL_PRINTF("DYNPOOL[%2d](TYPE: %-9s): %s\r\n", i, typename, outbuf);
     }
-    printf("----- DYNPOOL PRINT -----\r\n");
+    DYNPOOL_PRINTF("----- DYNPOOL PRINT -----\r\n");
 }
 
 /// <summary>
