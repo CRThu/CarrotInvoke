@@ -22,7 +22,7 @@ function_info_t* get_func_by_name(function_group_t* group, char* name)
 }
 
 
-void invoke(function_group_t* group, char* fname, ...)
+dyncall_status_t invoke(function_group_t* group, char* fname, ...)
 {
     function_info_t* f = get_func_by_name(group, fname);
     if (f == NULL)
@@ -86,7 +86,7 @@ void invoke(function_group_t* group, char* fname, ...)
     return invoke_by_pool(&pool, f);
 }
 
-void invoke_by_cmd(function_group_t* group, dynpool_t* pool)
+dyncall_status_t invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 {
     if (group == NULL || pool == NULL)
     {
