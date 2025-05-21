@@ -23,7 +23,7 @@ extern "C"
     #include "dynpool.h"
     #include "cmdparse.h"
 
-    #define DYNCALL_VERSION		        "1.1.3"
+    #define DYNCALL_VERSION		        "1.1.4"
 
     #define DYNCALL_DEBUG               1
     #define DYNCALL_FUNC_SIG            0

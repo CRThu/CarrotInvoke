@@ -4,11 +4,6 @@
 * 2025.03.18
 *****************************/
 #pragma once
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #ifndef _DYNPOOL_H_
 #define _DYNPOOL_H_
 
@@ -20,6 +15,11 @@
 extern "C"
 {
     #endif
+
+    #include <inttypes.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
 
     #define DYNPOOL_VERSION             "1.1.2"
 

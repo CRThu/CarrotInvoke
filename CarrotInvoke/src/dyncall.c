@@ -27,7 +27,7 @@ dyncall_status_t invoke(function_group_t* group, char* fname, ...)
     function_info_t* f = get_func_by_name(group, fname);
     if (f == NULL)
     {
-        DYNCALL_PRINTF("[ERROR]: Function '%s' not found\n", fname);
+        DYNCALL_PRINTF("[ERROR]: Function '%s' not found.\r\n", fname);
         return DYNCALL_ERR_FUNC_NOT_FOUND;
     }
 
@@ -90,7 +90,7 @@ dyncall_status_t invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 {
     if (group == NULL || pool == NULL)
     {
-        DYNCALL_PRINTF("[ERROR]: Invalid group or pool.\n");
+        DYNCALL_PRINTF("[ERROR]: Invalid group or pool.\r\n");
         return DYNCALL_ERR_NULL_OBJECT;
     }
 
@@ -104,14 +104,14 @@ dyncall_status_t invoke_by_cmd(function_group_t* group, dynpool_t* pool)
 
     if (status != DYNPOOL_NO_ERROR)
     {
-        DYNCALL_PRINTF("[ERROR]: Failed to get function '%s' from pool.\n", fname_buf);
+        DYNCALL_PRINTF("[ERROR]: Failed to get function '%s' from pool.\r\n", fname_buf);
         return DYNCALL_ERR_POOL;
     }
 
     function_info_t* f = get_func_by_name(group, fname_buf);
     if (f == NULL)
     {
-        DYNCALL_PRINTF("[ERROR]: Function '%s' not found.\n", fname_buf);
+        DYNCALL_PRINTF("[ERROR]: Function '%s' not found.\r\n", fname_buf);
         return DYNCALL_ERR_FUNC_NOT_FOUND;
     }
 
@@ -127,7 +127,7 @@ dyncall_status_t invoke_by_pool(dynpool_t* pool, function_info_t* f)
 {
     if (f == NULL || pool == NULL)
     {
-        DYNCALL_PRINTF("[ERROR]: Invalid function or pool\n");
+        DYNCALL_PRINTF("[ERROR]: Invalid function or pool.\r\n");
         return DYNCALL_ERR_NULL_OBJECT;
     }
 
@@ -149,11 +149,11 @@ dyncall_status_t invoke_by_pool(dynpool_t* pool, function_info_t* f)
         {
             if (status == DYNPOOL_ERR_NO_DATA)
             {
-                DYNCALL_PRINTF("[WARNING]: No data at argument %d\n", i);
+                DYNCALL_PRINTF("[WARNING]: No data at argument %d.\r\n", i);
             }
             else
             {
-                DYNCALL_PRINTF("[ERROR]: Failed to get argument %d\n", i);
+                DYNCALL_PRINTF("[ERROR]: Failed to get argument %d.\r\n", i);
                 return DYNCALL_ERR_POOL;
             }
         }
@@ -279,7 +279,7 @@ dyncall_status_t invoke_by_pool(dynpool_t* pool, function_info_t* f)
         default:
         {
 
-            DYNCALL_PRINTF("[ERROR]: Unsupported argument count: %d\n", f->args_count);
+            DYNCALL_PRINTF("[ERROR]: Unsupported argument count: %d.\r\n", f->args_count);
             return DYNCALL_ERR_INVOKE_UNSUPPORTED;
         }
     }
