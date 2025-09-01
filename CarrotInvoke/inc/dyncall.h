@@ -23,9 +23,11 @@ extern "C"
     #include "dynpool.h"
     #include "cmdparse.h"
 
-    #define DYNCALL_VERSION		        "1.1.4"
+    #include "bsp_uart.h"
 
-    #define DYNCALL_DEBUG               1
+    #define DYNCALL_VERSION		        "1.1.5"
+
+    #define DYNCALL_DEBUG               0
     #define DYNCALL_FUNC_SIG            0
     #define DYNCALL_PRINTF              printf
 
@@ -92,6 +94,14 @@ extern "C"
 
     #define FUNCTION_INFO(HANDLER, RET, ...) {                                          \
     .name = #HANDLER,                                                                   \
+    .handler = HANDLER,                                                                 \
+    .ret_type = RET,                                                                    \
+    .args_type = { __VA_ARGS__ },                                                       \
+    .args_count = sizeof((dtypes_t[]) { __VA_ARGS__ }) / sizeof(dtypes_t)               \
+    }
+
+    #define FUNCTION_INFO_NAME(NAME, HANDLER, RET, ...) {                               \
+    .name = NAME,                                                                       \
     .handler = HANDLER,                                                                 \
     .ret_type = RET,                                                                    \
     .args_type = { __VA_ARGS__ },                                                       \
