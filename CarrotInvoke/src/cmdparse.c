@@ -25,7 +25,7 @@ static inline bool is_right_bracket(char c)
     return c == ')' || c == ']' || c == '}';
 }
 
-static void store_token(dynpool_t* pool, const char* start, uint16_t len)
+static dynpool_status_t store_token(dynpool_t* pool, const char* start, uint16_t len)
 {
     // 去除两端空白
     while (len > 0 && is_whitespace(*start)) { start++; len--; }
@@ -34,12 +34,14 @@ static void store_token(dynpool_t* pool, const char* start, uint16_t len)
     if (len > 0)
     {
         // 允许空参数但跳过函数名前空白
-        dynpool_set(pool, T_STRING, (void*)start, len);
+        return dynpool_set(pool, T_STRING, (void*)start, len);
     }
+
+    return DYNPOOL_NO_ERROR;
 }
 
 cmd_parse_status_t cmdparse_from_buffer(dynpool_t* pool, const uint8_t* buf,
-                                        uint16_t offset, uint16_t size, uint16_t* len)
+    uint16_t offset, uint16_t size, uint16_t* len)
 {
     uint16_t i = offset;
     uint16_t start = offset;
@@ -56,7 +58,9 @@ cmd_parse_status_t cmdparse_from_buffer(dynpool_t* pool, const uint8_t* buf,
         }
         if (is_terminator(c))
         {
-            store_token(pool, (char*)&buf[start], i - start);
+            int8_t pool_status = store_token(pool, (char*)&buf[start], i - start);
+            if (pool_status != DYNPOOL_NO_ERROR)
+                return CMD_PARSE_POOL_ERROR * 10 + pool_status;
             i = i + 1;
             *len = i - offset;
             break;
@@ -64,18 +68,24 @@ cmd_parse_status_t cmdparse_from_buffer(dynpool_t* pool, const uint8_t* buf,
         if (is_left_bracket(c))
         {
             depth++;
-            store_token(pool, (char*)&buf[start], i - start);
+            int8_t pool_status = store_token(pool, (char*)&buf[start], i - start);
+            if (pool_status != DYNPOOL_NO_ERROR)
+                return CMD_PARSE_POOL_ERROR * 10 + pool_status;
             start = i + 1;
         }
         if (is_right_bracket(c))
         {
             depth--;
-            store_token(pool, (char*)&buf[start], i - start);
+            int8_t pool_status = store_token(pool, (char*)&buf[start], i - start);
+            if (pool_status != DYNPOOL_NO_ERROR)
+                return CMD_PARSE_POOL_ERROR * 10 + pool_status;
             start = i + 1;
         }
         if (is_separator(c))
         {
-            store_token(pool, (char*)&buf[start], i - start);
+            int8_t pool_status = store_token(pool, (char*)&buf[start], i - start);
+            if (pool_status != DYNPOOL_NO_ERROR)
+                return CMD_PARSE_POOL_ERROR * 10 + pool_status;
             start = i + 1;
         }
         i = i + 1;

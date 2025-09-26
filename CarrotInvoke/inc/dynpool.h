@@ -26,7 +26,7 @@ extern "C"
     #define DYNPOOL_PRINTF              printf
 
     #define DYNPOOL_MAX_BYTES           1024
-    #define DYNPOOL_MAX_VARS            4
+    #define DYNPOOL_MAX_VARS            10
 
     // DYNAMIC TYPES IS VALUE OR POINTER
     #define DTYPES_BITS_OFFSET          (7)

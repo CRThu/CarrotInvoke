@@ -23,7 +23,7 @@ extern "C"
     #include <stdbool.h>
     #include "dynpool.h"
 
-    #define CMD_PARSE_VERSION                   "1.1.1"
+    #define CMD_PARSE_VERSION                   "1.1.2"
 
     typedef enum
     {
