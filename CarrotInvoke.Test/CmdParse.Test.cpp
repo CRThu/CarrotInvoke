@@ -85,7 +85,7 @@ namespace CarrotInvokeTest
             cmd_parse_status_t status = cmdparse_from_string(&pool, cmd, &len);
             Assert::AreEqual((int)CMDPARSE_OK, (int)status);
 
-            invoke_by_cmd(&default_func_group, &pool);
+            invoke_by_cmd(&pool);
         }
     };
 }

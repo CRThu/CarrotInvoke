@@ -33,35 +33,35 @@ void dynpool_internal_test()
 
 }
 
-void invoke_test()
-{
-    printf("--------------- INVOKE TEST ---------------\r\n");
-    function_info_t* hello = get_func_by_name(&default_func_group, "print_hello");
-    function_info_t* add = get_func_by_name(&default_func_group, "print_add");
-    if (hello == NULL)
-        printf("print_hello() not found\n");
-    else
-        printf("print_hello() found\n");
-    if (add == NULL)
-        printf("print_add() not found\n");
-    else
-        printf("print_add() found\n");
-
-}
-
-void dyncall_test()
-{
-    printf("--------------- DYNCALL TEST ---------------\r\n");
-    int64_t a = 123;
-    int64_t b = 456;
-    char* str = "test string";
-
-    invoke(&default_func_group, "print_hello");
-    invoke(&default_func_group, "print_add", a, b);
-    invoke(&default_func_group, "print_string", str);
-    invoke(&default_func_group, "print_dec", (int64_t)123456789);
-    invoke(&default_func_group, "print_hex", (uint64_t)0xABCDEF);
-}
+//void invoke_test()
+//{
+//    printf("--------------- INVOKE TEST ---------------\r\n");
+//    function_info_t* hello = get_func_by_name(&default_func_group, "print_hello");
+//    function_info_t* add = get_func_by_name(&default_func_group, "print_add");
+//    if (hello == NULL)
+//        printf("print_hello() not found\n");
+//    else
+//        printf("print_hello() found\n");
+//    if (add == NULL)
+//        printf("print_add() not found\n");
+//    else
+//        printf("print_add() found\n");
+//
+//}
+//
+//void dyncall_test()
+//{
+//    printf("--------------- DYNCALL TEST ---------------\r\n");
+//    int64_t a = 123;
+//    int64_t b = 456;
+//    char* str = "test string";
+//
+//    invoke(&default_func_group, "print_hello");
+//    invoke(&default_func_group, "print_add", a, b);
+//    invoke(&default_func_group, "print_string", str);
+//    invoke(&default_func_group, "print_dec", (int64_t)123456789);
+//    invoke(&default_func_group, "print_hex", (uint64_t)0xABCDEF);
+//}
 
 void cmdparse_test()
 {
@@ -86,7 +86,7 @@ void cmdparse_test()
         if (cmdparse_from_string(&pool, code[i], &len) == CMDPARSE_OK)
         {
             printf("[INFO]: cmdparse from string: %s\r\n", code[i]);
-            invoke_by_cmd(&default_func_group, &pool);
+            invoke_by_cmd(&pool);
         }
         else
         {
@@ -98,6 +98,7 @@ void cmdparse_test()
 
 int main()
 {
+    register_rpc_group(&default_func_group);
     //dynpool_internal_test();
     //invoke_test();
     //dyncall_test();

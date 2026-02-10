@@ -23,11 +23,11 @@ extern "C"
     #include "dynpool.h"
     #include "cmdparse.h"
 
-    #include "bsp_uart.h"
+    //#include "bsp_uart.h"
 
-    #define DYNCALL_VERSION		        "1.1.5"
+    #define DYNCALL_VERSION		        "1.1.7"
 
-    #define DYNCALL_DEBUG               0
+    #define DYNCALL_DEBUG               1
     #define DYNCALL_FUNC_SIG            0
     #define DYNCALL_PRINTF              printf
 
@@ -35,6 +35,8 @@ extern "C"
     #define DYNCALL_FUNC_MAX_CNT        256
     #define DYNCALL_ARGS_MAX_CNT	    9
     #define DYNCALL_ARGS_MAX_SIZE       64
+
+    #define DYNCALL_MAX_GROUPS          8
 
     #define DYNCALL_NO_ERROR                    (0)
     #define DYNCALL_ERR_FUNC_NOT_FOUND          (-1)
@@ -125,9 +127,11 @@ extern "C"
     #define PRINT_FUNC_SIGNATURE()  void
     #endif
 
-    function_info_t* get_func_by_name(function_group_t* group, char* name);
-    dyncall_status_t invoke(function_group_t* group, char* cmd, ...);
-    dyncall_status_t invoke_by_cmd(function_group_t* group, dynpool_t* pool);
+    dyncall_status_t register_rpc_group(function_group_t* group);
+
+    function_info_t* find_func(char* name);
+    dyncall_status_t invoke(char* cmd, ...);
+    dyncall_status_t invoke_by_cmd(dynpool_t* pool);
     dyncall_status_t invoke_by_pool(dynpool_t* pool, function_info_t* f);
 
 
