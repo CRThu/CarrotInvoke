@@ -1,0 +1,41 @@
+cmake_minimum_required(VERSION 3.14)
+project(CarrotInvoke C)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
+# ---- Static library ----
+add_library(carrot
+    src/dynpool.c
+    src/cmdparse.c
+    src/dyncall.c
+)
+target_include_directories(carrot PUBLIC inc)
+
+# ---- Demo executable ----
+add_executable(carrot_demo
+    examples/main.c
+    examples/func.c
+)
+target_link_libraries(carrot_demo PRIVATE carrot)
+target_include_directories(carrot_demo PRIVATE examples)
+
+# ---- Test executable ----
+add_executable(carrot_tests
+    vendor/unity/unity.c
+    examples/func.c
+    tests/test_helpers.c
+    tests/test_dynpool.c
+    tests/test_cmdparse.c
+    tests/test_dyncall.c
+    tests/test_e2e.c
+    tests/main_test.c
+)
+target_link_libraries(carrot_tests PRIVATE carrot)
+target_include_directories(carrot_tests PRIVATE
+    examples
+    tests
+    vendor/unity
+    vendor/fff
+)

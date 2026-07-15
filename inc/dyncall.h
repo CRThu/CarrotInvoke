@@ -128,6 +128,7 @@ extern "C"
     #endif
 
     dyncall_status_t register_rpc_group(function_group_t* group);
+    void dyncall_reset(void);
 
     function_info_t* find_func(char* name);
     dyncall_status_t invoke(char* cmd, ...);

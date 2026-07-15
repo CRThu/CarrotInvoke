@@ -3,6 +3,12 @@
 static function_group_t* _registered_groups[DYNCALL_MAX_GROUPS];
 static uint8_t _group_count = 0;
 
+void dyncall_reset(void)
+{
+    _group_count = 0;
+    memset(_registered_groups, 0, sizeof(_registered_groups));
+}
+
 /// <summary>
 /// 注册RPC方法组
 /// </summary>

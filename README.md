@@ -20,22 +20,22 @@ CarrotInvoke is a lightweight dynamic function invocation framework that support
 
 ```
 CarrotInvoke/
-├── CarrotInvoke/            # Core library
-│   ├── inc/                 # Headers
-│   │   ├── cmdparse.h       # Command parsing
-│   │   ├── dyncall.h        # Dynamic invocation
-│   │   └── dynpool.h        # Dynamic parameter pool
-│   └── src/                 # Sources
-│       ├── cmdparse.c       # Command parsing impl
-│       ├── dyncall.c        # Dynamic invocation impl
-│       └── dynpool.c        # Dynamic parameter pool impl
-├── CarrotInvoke.Demo/       # Demo program
-│   ├── func.c               # Demo functions
-│   ├── func.h               # Demo functions header
-│   └── main.c               # Demo main program
-└── CarrotInvoke.Test/       # Unit tests
-    ├── pch.h                # Precompiled header
-    └── *.cpp                # Test cases
+├── inc/                 # Headers
+│   ├── cmdparse.h       # Command parsing
+│   ├── dyncall.h        # Dynamic invocation
+│   └── dynpool.h        # Dynamic parameter pool
+├── src/                 # Sources
+│   ├── cmdparse.c       # Command parsing impl
+│   ├── dyncall.c        # Dynamic invocation impl
+│   └── dynpool.c        # Dynamic parameter pool impl
+├── examples/            # Example programs
+│   ├── func.c           # Example functions
+│   ├── func.h           # Example functions header
+│   └── main.c           # Example main program
+├── tests/               # Unit tests (Unity + FFF)
+│   └── *.c              # Test cases
+├── vendor/              # Third-party libraries (unity, fff)
+└── CMakeLists.txt       # CMake build config
 ```
 
 ### Quick Start
@@ -67,11 +67,21 @@ invoke_by_cmd(&default_func_group, &pool);
 
 ### Building
 
-Project is built with Visual Studio 2022:
+Project is built with CMake:
 
-1. Open `CarrotInvoke.sln` solution file
-2. Select build configuration (Debug/Release)
-3. Build solution
+```bash
+# Configure
+cmake -B build
+
+# Build
+cmake --build build
+
+# Run demo
+./build/carrot_demo
+
+# Run tests
+./build/carrot_tests
+```
 
 ### License
 
