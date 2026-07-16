@@ -18,7 +18,9 @@ void tearDown(void) {}
 /* External test suite entry points */
 extern int run_dynpool_tests(void);
 extern int run_cmdparse_tests(void);
+extern int run_cmdscan_tests(void);
 extern int run_dyncall_tests(void);
+extern int run_cmdqueue_tests(void);
 extern int run_e2e_tests(void);
 
 int main(void)
@@ -31,8 +33,14 @@ int main(void)
     printf("\n========== CmdParse Tests ==========\n");
     failures += run_cmdparse_tests();
 
+    printf("\n========== CmdScan Tests ==========\n");
+    failures += run_cmdscan_tests();
+
     printf("\n========== DynCall Tests ==========\n");
     failures += run_dyncall_tests();
+
+    printf("\n========== CmdQueue Tests ==========\n");
+    failures += run_cmdqueue_tests();
 
     printf("\n========== E2E Tests ==========\n");
     failures += run_e2e_tests();

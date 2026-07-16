@@ -9,7 +9,9 @@ set(CMAKE_C_EXTENSIONS OFF)
 add_library(carrot
     src/dynpool.c
     src/cmdparse.c
+    src/cmdscan.c
     src/dyncall.c
+    src/cmdqueue.c
 )
 target_include_directories(carrot PUBLIC inc)
 
@@ -21,6 +23,20 @@ add_executable(carrot_demo
 target_link_libraries(carrot_demo PRIVATE carrot)
 target_include_directories(carrot_demo PRIVATE examples)
 
+# ---- CMD SCAN Demo executable ----
+add_executable(cmdscan_demo
+    examples/cmdscan_demo.c
+)
+target_link_libraries(cmdscan_demo PRIVATE carrot)
+target_include_directories(cmdscan_demo PRIVATE examples)
+
+# ---- CMD QUEUE Demo executable ----
+add_executable(cmdqueue_demo
+    examples/cmdqueue_demo.c
+)
+target_link_libraries(cmdqueue_demo PRIVATE carrot)
+target_include_directories(cmdqueue_demo PRIVATE examples)
+
 # ---- Test executable ----
 add_executable(carrot_tests
     vendor/unity/unity.c
@@ -28,7 +44,9 @@ add_executable(carrot_tests
     tests/test_helpers.c
     tests/test_dynpool.c
     tests/test_cmdparse.c
+    tests/test_cmdscan.c
     tests/test_dyncall.c
+    tests/test_cmdqueue.c
     tests/test_e2e.c
     tests/main_test.c
 )
