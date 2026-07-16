@@ -298,7 +298,7 @@ void test_cmdscan_prefetch_multi_args_space(void)
     cmd_prefetch_t pf;
     scan_status_t s = cmdscan_prefetch(&scanner, &pf);
     TEST_ASSERT_EQUAL_INT(SCAN_COMPLETE, s);
-    TEST_ASSERT_EQUAL_UINT16(10, pf.cmd_len);     /* "print 1 2 3" */
+    TEST_ASSERT_EQUAL_UINT16(11, pf.cmd_len);     /* "print 1 2 3" */
     TEST_ASSERT_EQUAL_UINT8(5, pf.func_len);
 }
 

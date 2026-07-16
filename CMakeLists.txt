@@ -11,6 +11,9 @@ add_library(carrot
     src/cmdparse.c
     src/cmdscan.c
     src/dyncall.c
+    src/typeconv.c
+    src/dispatch.c
+    src/invoke.c
     src/cmdqueue.c
     src/ringbuf.c
 )
@@ -50,6 +53,10 @@ add_executable(carrot_tests
     tests/test_cmdqueue.c
     tests/test_ringbuf.c
     tests/test_e2e.c
+    tests/test_typeconv.c
+    tests/test_dispatch.c
+    tests/test_invoke_helpers.c
+    tests/test_invoke.c
     tests/main_test.c
 )
 target_link_libraries(carrot_tests PRIVATE carrot)
@@ -59,3 +66,4 @@ target_include_directories(carrot_tests PRIVATE
     vendor/unity
     vendor/fff
 )
+target_compile_definitions(carrot_tests PRIVATE UNITY_INCLUDE_DOUBLE)

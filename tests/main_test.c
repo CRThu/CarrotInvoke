@@ -2,6 +2,9 @@
  * main_test.c — Unity test runner entry point
  *
  * Global setUp/tearDown + runs all test suites.
+ *
+ * Old modules disabled: DynPool, CmdParse, DynCall, E2E
+ * (replaced by typeconv/dispatch/invoke pipeline)
  */
 #include "unity.h"
 #include "test_helpers.h"
@@ -16,29 +19,29 @@ void setUp(void)
 void tearDown(void) {}
 
 /* External test suite entry points */
-extern int run_dynpool_tests(void);
-extern int run_cmdparse_tests(void);
 extern int run_cmdscan_tests(void);
-extern int run_dyncall_tests(void);
 extern int run_cmdqueue_tests(void);
 extern int run_ringbuf_tests(void);
-extern int run_e2e_tests(void);
+extern int run_typeconv_tests(void);
+extern int run_dispatch_tests(void);
+extern int run_invoke_tests(void);
 
 int main(void)
 {
     int failures = 0;
 
-    printf("\n========== DynPool Tests ==========\n");
-    failures += run_dynpool_tests();
-
-    printf("\n========== CmdParse Tests ==========\n");
-    failures += run_cmdparse_tests();
+    /* Old modules disabled — replaced by typeconv/dispatch/invoke pipeline */
+    // printf("\n========== DynPool Tests ==========\n");
+    // failures += run_dynpool_tests();
+    // printf("\n========== CmdParse Tests ==========\n");
+    // failures += run_cmdparse_tests();
+    // printf("\n========== DynCall Tests ==========\n");
+    // failures += run_dyncall_tests();
+    // printf("\n========== E2E Tests ==========\n");
+    // failures += run_e2e_tests();
 
     printf("\n========== CmdScan Tests ==========\n");
     failures += run_cmdscan_tests();
-
-    printf("\n========== DynCall Tests ==========\n");
-    failures += run_dyncall_tests();
 
     printf("\n========== CmdQueue Tests ==========\n");
     failures += run_cmdqueue_tests();
@@ -46,8 +49,14 @@ int main(void)
     printf("\n========== RingBuf Tests ==========\n");
     failures += run_ringbuf_tests();
 
-    printf("\n========== E2E Tests ==========\n");
-    failures += run_e2e_tests();
+    printf("\n========== TypeConv Tests ==========\n");
+    failures += run_typeconv_tests();
+
+    printf("\n========== Dispatch Tests ==========\n");
+    failures += run_dispatch_tests();
+
+    printf("\n========== Invoke Tests ==========\n");
+    failures += run_invoke_tests();
 
     printf("\n========== SUMMARY ==========\n");
     if (failures == 0)

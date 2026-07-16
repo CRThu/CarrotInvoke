@@ -250,10 +250,10 @@ scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
             while (scanner->scan_pos < scanner->buf_size)
             {
                 c = (char)scanner->buf[scanner->scan_pos];
-                if (is_terminator(c) || is_separator(c))
+                if (is_terminator(c))
                 {
                     prefetch->cmd_len = scanner->scan_pos - cmd_start;
-                    scanner->scan_pos++; /* 跳过终止符/分隔符 */
+                    scanner->scan_pos++; /* 跳过终止符 */
                     return SCAN_COMPLETE;
                 }
                 if (is_right_bracket(c))

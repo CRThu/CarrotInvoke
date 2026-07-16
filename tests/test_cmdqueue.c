@@ -136,7 +136,7 @@ void test_cmdqueue_check_found(void)
     cmd_scanner_t scanner;
     cmd_prefetch_t pf1, pf2;
 
-    cmdscan_init(&scanner, (const uint8_t*)"start\nstop", 9);
+    cmdscan_init(&scanner, (const uint8_t*)"start\nstop", 10);
     cmdscan_prefetch(&scanner, &pf1);
     cmdscan_prefetch(&scanner, &pf2);
 
