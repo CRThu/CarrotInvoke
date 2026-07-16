@@ -17,12 +17,11 @@
 static void invoke_setUp(void)
 {
     invoke_test_helpers_reset();
-    dispatch_register(&invoke_mock_group);
 }
 
 /* ===== Helper: run full pipeline ===== */
 
-static dyncall_status_t run_pipeline(const char* buf, uint16_t len)
+static dispatch_status_t run_pipeline(const char* buf, uint16_t len)
 {
     cmd_scanner_t scanner;
     cmdscan_init(&scanner, (const uint8_t*)buf, len);
@@ -36,7 +35,7 @@ static dyncall_status_t run_pipeline(const char* buf, uint16_t len)
         cmd_queue_push(&queue, &pf);
     }
 
-    dyncall_status_t last_status = DYNCALL_NO_ERROR;
+    dispatch_status_t last_status = DISPATCH_OK;
     while (!cmd_queue_is_empty(&queue))
     {
         cmd_queue_pop(&queue, &pf);
@@ -57,8 +56,8 @@ static dyncall_status_t run_pipeline(const char* buf, uint16_t len)
 void test_icall_null_result(void)
 {
     invoke_setUp();
-    dyncall_status_t s = invoke_call(NULL, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_NULL_OBJECT, s);
+    dispatch_status_t s = invoke_call(NULL, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NULL, s);
 }
 
 void test_icall_null_func_name(void)
@@ -66,8 +65,8 @@ void test_icall_null_func_name(void)
     invoke_setUp();
     cmd_parse_result_t result;
     memset(&result, 0, sizeof(result));
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_NULL_OBJECT, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NULL, s);
 }
 
 void test_icall_func_not_found(void)
@@ -77,8 +76,8 @@ void test_icall_func_not_found(void)
     memset(&result, 0, sizeof(result));
     result.func_name = "nonexistent";
     result.func_name_len = strlen("nonexistent");
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_FUNC_NOT_FOUND, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
 }
 
 /* =================================================================
@@ -94,8 +93,8 @@ void test_icall_hello(void)
     result.func_name_len = 5;
     result.args_count = 0;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
@@ -114,8 +113,8 @@ void test_icall_dec_positive(void)
     result.args[0].len = 2;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
 
     /* p[i] points directly to int64_t — single dereference */
@@ -134,8 +133,8 @@ void test_icall_dec_negative(void)
     result.args[0].len = 4;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     int64_t val = *(int64_t*)invoke_mock_dec_fake.arg0_val;
     TEST_ASSERT_EQUAL_INT64(-100, val);
 }
@@ -151,8 +150,8 @@ void test_icall_dec_zero(void)
     result.args[0].len = 1;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     int64_t val = *(int64_t*)invoke_mock_dec_fake.arg0_val;
     TEST_ASSERT_EQUAL_INT64(0, val);
 }
@@ -172,8 +171,8 @@ void test_icall_hex_basic(void)
     result.args[0].len = 2;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     uint64_t val = *(uint64_t*)invoke_mock_hex_fake.arg0_val;
     TEST_ASSERT_EQUAL_HEX64(0xFF, val);
 }
@@ -189,8 +188,8 @@ void test_icall_hex_with_prefix(void)
     result.args[0].len = 6;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     uint64_t val = *(uint64_t*)invoke_mock_hex_fake.arg0_val;
     TEST_ASSERT_EQUAL_HEX64(0xDEAD, val);
 }
@@ -210,8 +209,8 @@ void test_icall_string_basic(void)
     result.args[0].len = 5;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
 
     /* p[i] points to null-terminated str_buf — single dereference */
     const char* val = (const char*)invoke_mock_string_fake.arg0_val;
@@ -236,8 +235,8 @@ void test_icall_add(void)
     result.args_count = 2;
 
     invoke_ret_t ret;
-    dyncall_status_t s = invoke_call(&result, &ret);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, &ret);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
 
     int64_t a = *(int64_t*)invoke_mock_add_fake.arg0_val;
@@ -265,8 +264,8 @@ void test_icall_3strings(void)
     result.args[2].len = 5;
     result.args_count = 3;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_args_fake.call_count);
 
     const char* a0 = (const char*)invoke_mock_args_fake.arg0_val;
@@ -292,8 +291,8 @@ void test_icall_arg_mismatch_too_many(void)
     result.args[0].len = 5;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_POOL, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_SIG, s);
     TEST_ASSERT_EQUAL_INT(0, invoke_mock_hello_fake.call_count);
 }
 
@@ -308,8 +307,8 @@ void test_icall_arg_mismatch_too_few(void)
     result.args[0].len = 2;
     result.args_count = 1;
 
-    dyncall_status_t s = invoke_call(&result, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_POOL, s);
+    dispatch_status_t s = invoke_call(&result, NULL);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_SIG, s);
     TEST_ASSERT_EQUAL_INT(0, invoke_mock_add_fake.call_count);
 }
 
@@ -328,8 +327,8 @@ void test_icall_ret_none(void)
 
     invoke_ret_t ret;
     ret.type = INVOKERET_STR;  /* sentinel */
-    dyncall_status_t s = invoke_call(&result, &ret);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, &ret);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(INVOKERET_NONE, ret.type);
 }
 
@@ -347,8 +346,8 @@ void test_icall_ret_i64(void)
     result.args_count = 2;
 
     invoke_ret_t ret;
-    dyncall_status_t s = invoke_call(&result, &ret);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = invoke_call(&result, &ret);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(INVOKERET_I64, ret.type);
     /* mock_add returns 0 by default (fff init), but ret type is correct */
 }
@@ -360,56 +359,56 @@ void test_icall_ret_i64(void)
 void test_icall_pipeline_hello(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("hello()\n", 8);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("hello()\n", 8);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_icall_pipeline_hello_no_parens(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("hello\n", 6);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("hello\n", 6);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_icall_pipeline_dec(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("dec(42)\n", 8);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("dec(42)\n", 8);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT64(42, invoke_captured.dec_val);
 }
 
 void test_icall_pipeline_dec_negative(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("dec(-100)\n", 10);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("dec(-100)\n", 10);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT64(-100, invoke_captured.dec_val);
 }
 
 void test_icall_pipeline_hex(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("hex(0xFF)\n", 10);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("hex(0xFF)\n", 10);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_HEX64(0xFF, invoke_captured.hex_val);
 }
 
 void test_icall_pipeline_string(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("str(hello)\n", 11);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("str(hello)\n", 11);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_STRING("hello", invoke_captured.str_val);
 }
 
 void test_icall_pipeline_add(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("add(10,20)\n", 11);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("add(10,20)\n", 11);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT64(10, invoke_captured.add_a);
     TEST_ASSERT_EQUAL_INT64(20, invoke_captured.add_b);
 }
@@ -417,8 +416,8 @@ void test_icall_pipeline_add(void)
 void test_icall_pipeline_args(void)
 {
     invoke_setUp();
-    dyncall_status_t s = run_pipeline("args(a,b,c)\n", 12);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline("args(a,b,c)\n", 12);
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_STRING("a", invoke_captured.arg0);
     TEST_ASSERT_EQUAL_STRING("b", invoke_captured.arg1);
     TEST_ASSERT_EQUAL_STRING("c", invoke_captured.arg2);
@@ -428,8 +427,8 @@ void test_icall_pipeline_two_commands(void)
 {
     invoke_setUp();
     const char* buf = "hello()\nhello()\n";
-    dyncall_status_t s = run_pipeline(buf, (uint16_t)strlen(buf));
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline(buf, (uint16_t)strlen(buf));
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(2, invoke_mock_hello_fake.call_count);
 }
 
@@ -437,8 +436,8 @@ void test_icall_pipeline_mixed_commands(void)
 {
     invoke_setUp();
     const char* buf = "hello()\ndec(42)\nhex(FF)\n";
-    dyncall_status_t s = run_pipeline(buf, (uint16_t)strlen(buf));
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_status_t s = run_pipeline(buf, (uint16_t)strlen(buf));
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 
     TEST_ASSERT_EQUAL_INT64(42, invoke_captured.dec_val);
@@ -449,8 +448,8 @@ void test_icall_pipeline_not_found(void)
 {
     invoke_setUp();
     const char* buf = "nonexistent()\n";
-    dyncall_status_t s = run_pipeline(buf, (uint16_t)strlen(buf));
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_FUNC_NOT_FOUND, s);
+    dispatch_status_t s = run_pipeline(buf, (uint16_t)strlen(buf));
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
 }
 
 int run_invoke_tests(void)

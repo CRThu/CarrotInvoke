@@ -7,7 +7,7 @@
 #ifndef TEST_INVOKE_HELPERS_H
 #define TEST_INVOKE_HELPERS_H
 
-#include "dyncall.h"
+#include "dispatch.h"
 #include "fff.h"
 
 /* ---- fff declarations (void* params, matching invoke calling convention) ---- */
@@ -32,9 +32,6 @@ typedef struct {
 } invoke_captured_t;
 
 extern invoke_captured_t invoke_captured;
-
-/* ---- Mock function group for invoke tests ---- */
-extern function_group_t invoke_mock_group;
 
 /* ---- Reset all invoke mocks + capture ---- */
 void invoke_test_helpers_reset(void);

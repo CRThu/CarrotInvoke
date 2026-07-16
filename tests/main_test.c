@@ -13,7 +13,6 @@
 void setUp(void)
 {
     test_helpers_reset();
-    register_rpc_group(&mock_func_group);
 }
 
 void tearDown(void) {}

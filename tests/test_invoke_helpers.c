@@ -10,7 +10,6 @@
  * NOTE: No DEFINE_FFF_GLOBALS here — it's defined in test_helpers.c.
  */
 #include "test_invoke_helpers.h"
-#include "dispatch.h"
 #include <string.h>
 
 /* ---- Capture variables ---- */
@@ -84,22 +83,21 @@ static void capture_args(void* a0, void* a1, void* a2)
     }
 }
 
-/* ---- Mock function group ---- */
-function_group_t invoke_mock_group =
+/* ---- 注册 mock 函数 (新 dispatch API) ---- */
+static void _register_invoke_mock_funcs(void)
 {
-    FUNCTION_GROUP("invoke_mock_group",
-        FUNCTION_INFO_NAME("hello",  invoke_mock_hello,  T_NULL, T_VOID),
-        FUNCTION_INFO_NAME("dec",    invoke_mock_dec,    T_NULL, T_DEC64),
-        FUNCTION_INFO_NAME("hex",    invoke_mock_hex,    T_NULL, T_HEX64),
-        FUNCTION_INFO_NAME("str",    invoke_mock_string, T_NULL, T_STRING),
-        FUNCTION_INFO_NAME("add",    invoke_mock_add,    T_DEC64, T_DEC64, T_DEC64),
-        FUNCTION_INFO_NAME("args",   invoke_mock_args,   T_NULL, T_STRING, T_STRING, T_STRING),
-    )
-};
+    dispatch_reg(invoke_mock_hello,  "hello()");
+    dispatch_reg(invoke_mock_dec,    "dec(i)");
+    dispatch_reg(invoke_mock_hex,    "hex(u)");
+    dispatch_reg(invoke_mock_string, "str(s)");
+    dispatch_reg(invoke_mock_add,    "add(i, i) -> i");
+    dispatch_reg(invoke_mock_args,   "args(s, s, s)");
+}
 
 void invoke_test_helpers_reset(void)
 {
     dispatch_init();
+    _register_invoke_mock_funcs();
     memset(&invoke_captured, 0, sizeof(invoke_captured));
     RESET_FAKE(invoke_mock_hello);
     RESET_FAKE(invoke_mock_add);

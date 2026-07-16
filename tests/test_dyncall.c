@@ -1,12 +1,60 @@
 /**
- * test_dyncall.c — Unit tests for dyncall module
+ * test_dyncall.c — Unit tests for dyncall module (old API)
+ *
+ * Self-contained: defines its own mock functions and groups
+ * to avoid depending on test_helpers.h (which now uses dispatch v2).
  */
 #include "unity.h"
-#include "test_helpers.h"
+#include "fff.h"
 #include "dyncall.h"
 #include "dynpool.h"
 #include "cmdparse.h"
 #include <string.h>
+
+/* ---- fff declarations for old dyncall tests (void** params) ---- */
+DECLARE_FAKE_VOID_FUNC(print_hello_mock);
+DECLARE_FAKE_VALUE_FUNC(int64_t, print_add_mock, void**, void**);
+DECLARE_FAKE_VOID_FUNC(print_dec_mock, void**);
+DECLARE_FAKE_VOID_FUNC(print_hex_mock, void**);
+DECLARE_FAKE_VOID_FUNC(print_string_mock, void**);
+DECLARE_FAKE_VOID_FUNC(print_args_mock, void**, void**, void**);
+
+/* ---- fff global state ---- */
+DEFINE_FFF_GLOBALS;
+
+/* ---- fff definitions ---- */
+DEFINE_FAKE_VOID_FUNC(print_hello_mock);
+DEFINE_FAKE_VALUE_FUNC(int64_t, print_add_mock, void**, void**);
+DEFINE_FAKE_VOID_FUNC(print_dec_mock, void**);
+DEFINE_FAKE_VOID_FUNC(print_hex_mock, void**);
+DEFINE_FAKE_VOID_FUNC(print_string_mock, void**);
+DEFINE_FAKE_VOID_FUNC(print_args_mock, void**, void**, void**);
+
+/* ---- Old mock function group ---- */
+static function_group_t mock_func_group =
+{
+    FUNCTION_GROUP("mock_func_group",
+        FUNCTION_INFO_NAME("print_hello",  print_hello_mock,  T_NULL, T_VOID),
+        FUNCTION_INFO_NAME("print_dec",    print_dec_mock,    T_NULL, T_DEC64),
+        FUNCTION_INFO_NAME("print_hex",    print_hex_mock,    T_NULL, T_HEX64),
+        FUNCTION_INFO_NAME("print_string", print_string_mock, T_NULL, T_STRING),
+        FUNCTION_INFO_NAME("print_add",    print_add_mock,    T_DEC64, T_DEC64, T_DEC64),
+        FUNCTION_INFO_NAME("print_args",   print_args_mock,   T_NULL, T_STRING, T_STRING, T_STRING),
+    )
+};
+
+/* ---- Old default function group (same mocks, different group name) ---- */
+static function_group_t default_func_group =
+{
+    FUNCTION_GROUP("default_func_group",
+        FUNCTION_INFO_NAME("print_hello",  print_hello_mock,  T_NULL, T_VOID),
+        FUNCTION_INFO_NAME("print_dec",    print_dec_mock,    T_NULL, T_DEC64),
+        FUNCTION_INFO_NAME("print_hex",    print_hex_mock,    T_NULL, T_HEX64),
+        FUNCTION_INFO_NAME("print_string", print_string_mock, T_NULL, T_STRING),
+        FUNCTION_INFO_NAME("print_add",    print_add_mock,    T_DEC64, T_DEC64, T_DEC64),
+        FUNCTION_INFO_NAME("print_args",   print_args_mock,   T_NULL, T_STRING, T_STRING, T_STRING),
+    )
+};
 
 /* ===== find_func ===== */
 void test_find_func_exists(void)

@@ -1,9 +1,9 @@
 /****************************
- * INVOKE - 调度执行引擎
+ * INVOKE v2 - 调度执行引擎
  * CarrotRPC
  *
  * 设计目标：
- * 1. 栈上 staging buffer: val_i64[9], val_u64[9], str_buf[256], void* p[9]
+ * 1. 栈上 staging buffer: val_i64[9], val_u64[9], str_buf[9][64], void* p[9]
  * 2. p[i] 直接指向数据 (一次解引用读取值)
  * 3. 依赖 typeconv (纯转换) 和 dispatch (函数查找)
  * 4. 支持三种返回值族: void / int64 / char*
@@ -22,6 +22,11 @@ extern "C"
 #include "cmdscan.h"
 
 /*=============================================================
+ * 常量
+ *=============================================================*/
+#define INVOKE_STR_MAX_SIZE  64
+
+/*=============================================================
  * 返回值类型
  *=============================================================*/
 
@@ -38,13 +43,25 @@ typedef struct
     union
     {
         int64_t i64;
-        char str[DYNCALL_ARGS_MAX_SIZE];
+        char str[INVOKE_STR_MAX_SIZE];
     };
 } invoke_ret_t;
 
 /*=============================================================
- * 新增 delegate 类型族 (int64 返回 / char* 返回)
+ * delegate 类型族 (void 返回 / int64 返回 / char* 返回)
  *=============================================================*/
+
+/* --- void 返回 --- */
+typedef void (*invoke_delegate_a0r0)(void);
+typedef void (*invoke_delegate_a1r0)(void* arg1);
+typedef void (*invoke_delegate_a2r0)(void* arg1, void* arg2);
+typedef void (*invoke_delegate_a3r0)(void* arg1, void* arg2, void* arg3);
+typedef void (*invoke_delegate_a4r0)(void* arg1, void* arg2, void* arg3, void* arg4);
+typedef void (*invoke_delegate_a5r0)(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5);
+typedef void (*invoke_delegate_a6r0)(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6);
+typedef void (*invoke_delegate_a7r0)(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6, void* arg7);
+typedef void (*invoke_delegate_a8r0)(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6, void* arg7, void* arg8);
+typedef void (*invoke_delegate_a9r0)(void* arg1, void* arg2, void* arg3, void* arg4, void* arg5, void* arg6, void* arg7, void* arg8, void* arg9);
 
 /* --- int64 返回 --- */
 typedef int64_t (*invoke_delegate_a0r1)(void);
@@ -75,19 +92,13 @@ typedef char* (*invoke_delegate_a9rs)(void* arg1, void* arg2, void* arg3, void* 
  *=============================================================*/
 
 /**
- * @brief 通过零拷贝解析结果调用函数 (新版)
- *
- * 与旧 invoke_by_args 的区别：
- * - 使用 dispatch 模块查找函数 (独立注册表)
- * - 使用 typeconv 模块转换参数
- * - p[i] 直接指向数据 (一次解引用)
- * - 支持返回值捕获
+ * @brief 通过零拷贝解析结果调用函数
  *
  * @param result  零拷贝解析结果
  * @param ret     可选的返回值输出 (NULL = 忽略返回值)
- * @return dyncall_status_t 调用状态
+ * @return dispatch_status_t 调用状态
  */
-dyncall_status_t invoke_call(cmd_parse_result_t* result, invoke_ret_t* ret);
+dispatch_status_t invoke_call(cmd_parse_result_t* result, invoke_ret_t* ret);
 
 #ifdef __cplusplus
 }

@@ -3,26 +3,19 @@
 ## 1. 即时执行（单条命令）
 
 ```c
-#include "dyncall.h"
+#include "dispatch.h"
+#include "invoke.h"
 #include "cmdscan.h"
 #include "cmdqueue.h"
 
 /* RPC 函数定义 */
-void LED_On(int32_t *channel) {
+void LED_On(void* channel) {
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 }
 
-void LED_Off(int32_t *channel) {
+void LED_Off(void* channel) {
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 }
-
-/* 函数组注册 */
-function_group_t led_group = {
-    FUNCTION_GROUP("LED",
-        FUNCTION_INFO(LED_On, T_NULL, T_DEC64),
-        FUNCTION_INFO(LED_Off, T_NULL, T_DEC64)
-    )
-};
 
 /* DMA 回调：预解析后推入队列 */
 cmd_queue_t cmd_queue;
@@ -39,21 +32,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 /* 主程序 */
 int main(void) {
-    register_rpc_group(&led_group);
+    dispatch_init();
+    dispatch_reg(LED_On,  "LED_On(i)");
+    dispatch_reg(LED_Off, "LED_Off(i)");
     cmd_queue_init(&cmd_queue);
-    
+
     while (1) {
         cmd_prefetch_t pf;
-        if (cmd_queue_pop(&cmd_queue, &pf) == DYNCALL_NO_ERROR) {
-            /* 执行时用 cmdparse_args 解析参数 */
+        if (cmd_queue_pop(&cmd_queue, &pf)) {
             cmd_parse_result_t result;
             cmdparse_args(pf.buf + pf.cmd_start, pf.cmd_len, &result);
-                          item->cmd_len, &result);
-            
-            function_info_t *func = find_func(result.func_name);
-            if (func) {
-                invoke_by_pool(func, result.args);
-            }
+
+            invoke_ret_t ret;
+            invoke_call(&result, &ret);
         }
     }
 }
@@ -86,19 +77,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 /* 主循环：逐条执行 */
 int main(void) {
-    register_rpc_group(&motor_group);
+    dispatch_init();
+    dispatch_reg(Motor_SetSpeed, "Motor_SetSpeed(i, i)");
+    dispatch_reg(Motor_Run,     "Motor_Run(i)");
     cmd_queue_init(&cmd_queue);
-    
+
     while (1) {
         cmd_prefetch_t pf;
-        if (cmd_queue_pop(&cmd_queue, &pf) == DYNCALL_NO_ERROR) {
+        if (cmd_queue_pop(&cmd_queue, &pf)) {
             cmd_parse_result_t result;
             cmdparse_args(pf.buf + pf.cmd_start, pf.cmd_len, &result);
-            
-            function_info_t *func = find_func(result.func_name);
-            if (func) {
-                invoke_by_pool(func, result.args);
-            }
+
+            invoke_call(&result, NULL);
         }
     }
 }
@@ -119,14 +109,14 @@ Motor_Run(1)
 
 ```c
 /* 电机运行（可被中断） */
-void Motor_Run(int32_t *speed) {
+void Motor_Run(void* speed) {
     for (int i = 0; i < 1000; i++) {
         /* 检查是否有 "Motor_Stop" 命令 */
         if (cmd_queue_check(&cmd_queue, "Motor_Stop")) {
             return;  /* 被中断，提前退出 */
         }
-        
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, *speed);
+
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, *(int64_t*)speed);
         HAL_Delay(10);
     }
 }
@@ -137,7 +127,8 @@ cmd_queue_t cmd_queue;
 /* DMA 回调 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     cmd_prefetch_t prefetch;
-    if (cmdscan_prefetch(rx_buffer, rx_len, &prefetch) == SCAN_COMPLETE) {
+    cmdscan_init(&cmd_scanner, rx_buffer, rx_len);
+    if (cmdscan_prefetch(&cmd_scanner, &prefetch) == SCAN_COMPLETE) {
         cmd_queue_push(&cmd_queue, &prefetch);
     }
     HAL_UART_Receive_DMA(&huart1, rx_buffer, RX_SIZE);
@@ -145,19 +136,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 /* 主程序 */
 int main(void) {
-    register_rpc_group(&motor_group);
+    dispatch_init();
+    dispatch_reg(Motor_Run,  "Motor_Run(i)");
+    dispatch_reg(Motor_Stop, "Motor_Stop()");
     cmd_queue_init(&cmd_queue);
-    
+
     while (1) {
         cmd_prefetch_t pf;
-        if (cmd_queue_pop(&cmd_queue, &pf) == DYNCALL_NO_ERROR) {
+        if (cmd_queue_pop(&cmd_queue, &pf)) {
             cmd_parse_result_t result;
             cmdparse_args(pf.buf + pf.cmd_start, pf.cmd_len, &result);
-            
-            function_info_t *func = find_func(result.func_name);
-            if (func) {
-                invoke_by_pool(func, result.args);
-            }
+
+            invoke_call(&result, NULL);
         }
     }
 }
@@ -169,16 +159,49 @@ int main(void) {
 
 ---
 
-## 注意事项
+## 4. 返回值捕获
 
-1. **回调中不要执行命令**：DMA 回调只预解析并推入队列，在主循环中执行
-2. **参数必须是指针**：`void Func(int32_t *value)` 而不是 `void Func(int32_t value)`
-3. **函数名区分大小写**
-4. **DMA 缓冲区**：`cmdscan_prefetch` 支持环形/非环形缓冲区，传入实际数据长度即可
+```c
+int64_t add(void* a, void* b) {
+    return *(int64_t*)a + *(int64_t*)b;
+}
+
+/* 注册 */
+dispatch_reg(add, "add(i, i) -> i");
+
+/* 调用并捕获返回值 */
+cmd_parse_result_t result;
+cmdparse_args("add(10, 20)", 12, &result);
+
+invoke_ret_t ret;
+dispatch_status_t s = invoke_call(&result, &ret);
+if (s == DISPATCH_OK && ret.type == INVOKERET_I64) {
+    printf("result: %ld\n", ret.i64);  // result: 30
+}
+```
 
 ---
 
-## 5. DMA 环形缓冲区集成
+## 5. 签名格式参考
+
+```
+"函数名(参数类型...) -> 返回类型"
+```
+
+| 字符 | 类型 | 示例 |
+|------|------|------|
+| `v` | void | `"hello()"` |
+| `i` / `i64` | int64 | `"add(i, i) -> i"` |
+| `u` / `u64` | uint64 | `"hex(u) -> u"` |
+| `s` | string | `"echo(s) -> s"` |
+| `f` / `f64` | float64 | `"pi() -> f"` |
+
+- 无 `->` 则 void 返回: `"proc(s, i, u)"` 等价于 `"proc(s, i, u) -> v"`
+- 不带括号也支持: `"i, i -> i"`
+
+---
+
+## 6. DMA 环形缓冲区集成
 
 > **启用 DMA 模式**: 在 `ringbuf.h` 中取消注释 `#define RINGBUF_DMA`，启用硬件同步功能。
 
@@ -186,6 +209,8 @@ int main(void) {
 #include "ringbuf.h"
 #include "cmdscan.h"
 #include "cmdqueue.h"
+#include "dispatch.h"
+#include "invoke.h"
 
 /* STM32 DMA 环形缓冲区 */
 #define DMA_BUF_SIZE  2048
@@ -206,9 +231,6 @@ void DMA_Init(void) {
 
 /* DMA 回调：更新 head，扫描命令，推入队列 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    /* DMA 硬件自动更新 buf，我们只需读取 head */
-    /* get_dma_head() 会自动从硬件寄存器读取 */
-
     cmd_scanner_t scanner;
     cmdscan_init(&scanner, dma_ring.buf, dma_ring.size);
 
@@ -221,17 +243,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 /* 主循环 */
 int main(void) {
     DMA_Init();
+    dispatch_init();
+    dispatch_reg(LED_On,  "LED_On(i)");
+    dispatch_reg(LED_Off, "LED_Off(i)");
 
     while (1) {
         cmd_prefetch_t pf;
-        if (cmd_queue_pop(&cmd_queue, &pf) == DYNCALL_NO_ERROR) {
+        if (cmd_queue_pop(&cmd_queue, &pf)) {
             cmd_parse_result_t result;
             cmdparse_args(pf.buf + pf.cmd_start, pf.cmd_len, &result);
 
-            function_info_t *func = find_func(result.func_name);
-            if (func) {
-                invoke_by_pool(func, result.args);
-            }
+            invoke_call(&result, NULL);
         }
     }
 }
@@ -255,3 +277,13 @@ ringbuf_peek(&dma_ring, tmp, len);
 /* 跳过已处理数据 */
 ringbuf_skip(&dma_ring, len);
 ```
+
+---
+
+## 注意事项
+
+1. **回调中不要执行命令**：DMA 回调只预解析并推入队列，在主循环中执行
+2. **参数是指针**：函数签名 `void func(void* arg)`，内部 `*(int64_t*)arg` 读取值
+3. **函数名区分大小写**
+4. **DMA 缓冲区**：`cmdscan_prefetch` 支持环形/非环形缓冲区，传入实际数据长度即可
+5. **签名字符串**：类型写错不会编译报错，运行时解析失败返回 `DISPATCH_ERR_SIG`
