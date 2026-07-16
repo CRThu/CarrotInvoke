@@ -21,6 +21,7 @@ extern "C"
 #include <inttypes.h>
 #include "cmdscan.h"
 #include "dyncall.h"
+#include "ringbuf.h"
 
 #define CMD_QUEUE_SIZE              128
 #define CMD_QUEUE_BUF_SIZE          2048
@@ -29,11 +30,10 @@ extern "C"
 typedef struct
 {
     cmd_prefetch_t items[CMD_QUEUE_SIZE];
-    char buf[CMD_QUEUE_BUF_SIZE];
-    uint16_t buf_head;        /* 写游标 */
-    uint8_t head;             /* 队头索引 */
-    uint8_t tail;             /* 队尾索引 */
-    uint8_t count;            /* 当前队列长度 */
+    ringbuf_t ring;             /* 环形缓冲区（管理命令数据） */
+    uint8_t head;               /* 队头索引 */
+    uint8_t tail;               /* 队尾索引 */
+    uint8_t count;              /* 当前队列长度 */
 } cmd_queue_t;
 
 /**

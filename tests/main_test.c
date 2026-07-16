@@ -21,6 +21,7 @@ extern int run_cmdparse_tests(void);
 extern int run_cmdscan_tests(void);
 extern int run_dyncall_tests(void);
 extern int run_cmdqueue_tests(void);
+extern int run_ringbuf_tests(void);
 extern int run_e2e_tests(void);
 
 int main(void)
@@ -41,6 +42,9 @@ int main(void)
 
     printf("\n========== CmdQueue Tests ==========\n");
     failures += run_cmdqueue_tests();
+
+    printf("\n========== RingBuf Tests ==========\n");
+    failures += run_ringbuf_tests();
 
     printf("\n========== E2E Tests ==========\n");
     failures += run_e2e_tests();

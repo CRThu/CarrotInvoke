@@ -12,6 +12,7 @@ add_library(carrot
     src/cmdscan.c
     src/dyncall.c
     src/cmdqueue.c
+    src/ringbuf.c
 )
 target_include_directories(carrot PUBLIC inc)
 
@@ -47,6 +48,7 @@ add_executable(carrot_tests
     tests/test_cmdscan.c
     tests/test_dyncall.c
     tests/test_cmdqueue.c
+    tests/test_ringbuf.c
     tests/test_e2e.c
     tests/main_test.c
 )

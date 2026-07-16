@@ -43,11 +43,11 @@ int main(void) {
     cmd_queue_init(&cmd_queue);
     
     while (1) {
-        cmd_queue_item_t *item;
-        if (cmd_queue_pop(&cmd_queue, &item) == DYNCALL_NO_ERROR) {
+        cmd_prefetch_t pf;
+        if (cmd_queue_pop(&cmd_queue, &pf) == DYNCALL_NO_ERROR) {
             /* 执行时用 cmdparse_args 解析参数 */
             cmd_parse_result_t result;
-            cmdparse_args(cmd_queue_get_cmd(&cmd_queue, item),
+            cmdparse_args(pf.buf + pf.cmd_start, pf.cmd_len, &result);
                           item->cmd_len, &result);
             
             function_info_t *func = find_func(result.func_name);
@@ -175,3 +175,83 @@ int main(void) {
 2. **参数必须是指针**：`void Func(int32_t *value)` 而不是 `void Func(int32_t value)`
 3. **函数名区分大小写**
 4. **DMA 缓冲区**：`cmdscan_prefetch` 支持环形/非环形缓冲区，传入实际数据长度即可
+
+---
+
+## 5. DMA 环形缓冲区集成
+
+> **启用 DMA 模式**: 在 `ringbuf.h` 中取消注释 `#define RINGBUF_DMA`，启用硬件同步功能。
+
+```c
+#include "ringbuf.h"
+#include "cmdscan.h"
+#include "cmdqueue.h"
+
+/* STM32 DMA 环形缓冲区 */
+#define DMA_BUF_SIZE  2048
+uint8_t dma_buf[DMA_BUF_SIZE];
+ringbuf_t dma_ring;
+
+/* STM32: 从 NDTR 寄存器读取 DMA 写位置 */
+uint16_t get_dma_head(void) {
+    return DMA_BUF_SIZE - DMA1_SNDTR(DMA_BUF_SIZE);
+}
+
+/* 初始化 */
+void DMA_Init(void) {
+    ringbuf_init(&dma_ring, dma_buf, DMA_BUF_SIZE);
+    ringbuf_set_head_reader(&dma_ring, get_dma_head);
+    cmd_queue_init(&cmd_queue);
+}
+
+/* DMA 回调：更新 head，扫描命令，推入队列 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    /* DMA 硬件自动更新 buf，我们只需读取 head */
+    /* get_dma_head() 会自动从硬件寄存器读取 */
+
+    cmd_scanner_t scanner;
+    cmdscan_init(&scanner, dma_ring.buf, dma_ring.size);
+
+    cmd_prefetch_t prefetch;
+    while (cmdscan_prefetch(&scanner, &prefetch) == SCAN_COMPLETE) {
+        cmd_queue_push(&cmd_queue, &prefetch);
+    }
+}
+
+/* 主循环 */
+int main(void) {
+    DMA_Init();
+
+    while (1) {
+        cmd_prefetch_t pf;
+        if (cmd_queue_pop(&cmd_queue, &pf) == DYNCALL_NO_ERROR) {
+            cmd_parse_result_t result;
+            cmdparse_args(pf.buf + pf.cmd_start, pf.cmd_len, &result);
+
+            function_info_t *func = find_func(result.func_name);
+            if (func) {
+                invoke_by_pool(func, result.args);
+            }
+        }
+    }
+}
+```
+
+**软件模式（调试用，无需 `RINGBUF_DMA`）：**
+
+```c
+ringbuf_init(&dma_ring, dma_buf, DMA_BUF_SIZE);
+
+/* 在轮询中手动更新 head */
+ringbuf_set_head(&dma_ring, DMA1_SNDTR(DMA_BUF_SIZE));
+
+/* 可读数据量 */
+uint16_t len = ringbuf_readable(&dma_ring);
+
+/* 读取数据（处理 wrap-around） */
+uint8_t tmp[256];
+ringbuf_peek(&dma_ring, tmp, len);
+
+/* 跳过已处理数据 */
+ringbuf_skip(&dma_ring, len);
+```
