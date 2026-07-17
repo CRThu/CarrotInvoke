@@ -29,4 +29,22 @@ cmake -S "%~dp0." -B "%~dp0build" -G Ninja || exit /b 1
 cmake --build "%~dp0build" || exit /b 1
 
 if /i "%1"=="run" "%~dp0build\carrot_tests.exe"
-if /i "%1"=="demo" "%~dp0build\carrot_demo.exe"
+if /i "%1"=="demo" (
+    echo === cmdscan_demo ===
+    "%~dp0build\cmdscan_demo.exe"
+    echo.
+    echo === cmdqueue_demo ===
+    "%~dp0build\cmdqueue_demo.exe"
+    echo.
+    echo === rpclog_demo ===
+    "%~dp0build\rpclog_demo.exe"
+    echo.
+    echo === dispatch_demo ===
+    "%~dp0build\dispatch_demo.exe"
+    echo.
+    echo === invoke_demo ===
+    "%~dp0build\invoke_demo.exe"
+    echo.
+    echo === ringbuf_demo ===
+    "%~dp0build\ringbuf_demo.exe"
+)

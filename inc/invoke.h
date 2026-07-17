@@ -20,11 +20,14 @@ extern "C"
 #include "dispatch.h"
 #include "typeconv.h"
 #include "cmdscan.h"
+#include "rpc_cfg.h"
 
 /*=============================================================
- * 常量
+ * 常量（保留默认值，允许用户在 rpc_config.h 或 CMake 覆盖）
  *=============================================================*/
+#ifndef INVOKE_STR_MAX_SIZE
 #define INVOKE_STR_MAX_SIZE  64
+#endif
 
 /*=============================================================
  * 返回值类型

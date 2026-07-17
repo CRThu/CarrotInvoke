@@ -38,6 +38,27 @@ add_executable(rpclog_demo
 target_link_libraries(rpclog_demo PRIVATE carrot)
 target_include_directories(rpclog_demo PRIVATE examples)
 
+# ---- DISPATCH Demo executable ----
+add_executable(dispatch_demo
+    examples/dispatch_demo.c
+)
+target_link_libraries(dispatch_demo PRIVATE carrot)
+target_include_directories(dispatch_demo PRIVATE examples)
+
+# ---- INVOKE Demo executable ----
+add_executable(invoke_demo
+    examples/invoke_demo.c
+)
+target_link_libraries(invoke_demo PRIVATE carrot)
+target_include_directories(invoke_demo PRIVATE examples)
+
+# ---- RINGBUF Demo executable ----
+add_executable(ringbuf_demo
+    examples/ringbuf_demo.c
+)
+target_link_libraries(ringbuf_demo PRIVATE carrot)
+target_include_directories(ringbuf_demo PRIVATE examples)
+
 # ---- Test executable ----
 add_executable(carrot_tests
     vendor/unity/unity.c

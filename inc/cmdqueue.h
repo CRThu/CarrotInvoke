@@ -19,6 +19,7 @@ extern "C"
 #endif
 
 #include <inttypes.h>
+#include "rpc_cfg.h"
 #include "cmdscan.h"
 #include "ringbuf.h"
 
@@ -29,8 +30,13 @@ typedef enum {
     CMDQUEUE_ERR_FULL,      /* 队列满 / 缓冲区不足 */
 } cmd_queue_status_t;
 
+/* 保留默认值，允许用户在 rpc_config.h 或 CMake 覆盖 */
+#ifndef CMD_QUEUE_SIZE
 #define CMD_QUEUE_SIZE              128
+#endif
+#ifndef CMD_QUEUE_BUF_SIZE
 #define CMD_QUEUE_BUF_SIZE          2048
+#endif
 
 /* 命令队列 */
 typedef struct

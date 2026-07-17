@@ -17,11 +17,42 @@ CarrotInvoke is a lightweight C dynamic function invocation framework for embedd
 - **Embedded-Optimized**: No stdlib dependencies in core modules, tail-priority byte comparison for fast name matching
 - **Unified Logging**: `rpc_log` replaces printf with level-based logging (DEBUG/INFO/WARN/ERROR + protocol levels), zero stdio dependency
 
+### Configuration
+
+Edit `inc/rpc_cfg.h` to enable/disable features:
+
+```c
+/* ringbuf */
+#define RINGBUF_DMA              // Enable DMA hardware sync
+
+/* rpclog */
+#define RPC_LOG_ENABLE_DEBUG  1  // Enable DEBUG log
+#define RPC_LOG_ENABLE_INFO   1  // Enable INFO log
+#define RPC_LOG_ENABLE_WARN   1  // Enable WARN log
+#define RPC_LOG_ENABLE_ERROR  1  // Enable ERROR log
+#define RPC_LOG_OUTPUT_BUF       // Enable buffer output mode
+
+/* cmdqueue */
+#define CMD_QUEUE_SIZE      128  // Queue capacity
+#define CMD_QUEUE_BUF_SIZE  2048 // Queue buffer size
+
+/* dispatch */
+#define DISPATCH_MAX_FUNC_CNT  64  // Max registered functions
+#define DISPATCH_ARGS_MAX_CNT  9   // Max args per function
+
+/* invoke */
+#define INVOKE_STR_MAX_SIZE    64  // Max string return length
+```
+
+Or via CMake: `-DRPC_LOG_ENABLE_DEBUG=0`
+
 ### Directory Structure
 
 ```
 CarrotInvoke/
 ├── inc/                 # Public headers
+│   ├── rpc.h            # Unified entry (recommended)
+│   ├── rpc_cfg.h        # Global configuration (compile switches)
 │   ├── cmdscan.h        # Zero-copy command scanner + arg splitter
 │   ├── cmdqueue.h       # Command queue (ring buffer)
 │   ├── dispatch.h       # Function registration + lookup
@@ -41,11 +72,7 @@ CarrotInvoke/
 ### Quick Start
 
 ```c
-#include "dispatch.h"
-#include "invoke.h"
-#include "cmdscan.h"
-#include "cmdqueue.h"
-#include "rpclog.h"
+#include "rpc.h"
 
 /* 1. Define handler functions */
 void LED_On(void* channel) {
@@ -102,7 +129,7 @@ cmake --build build
 
 ### Testing
 
-245 tests across 8 suites: e2e, cmdscan, cmdqueue, ringbuf, typeconv, dispatch, invoke, rpc_log.
+222 tests across 8 suites: e2e, cmdscan, cmdqueue, ringbuf, typeconv, dispatch, invoke, rpc_log.
 
 ### License
 

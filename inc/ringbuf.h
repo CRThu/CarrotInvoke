@@ -23,9 +23,12 @@ extern "C"
 #endif
 
 #include <inttypes.h>
+#include "rpc_cfg.h"
 
-/* 取消注释以启用 DMA 硬件同步功能 */
+/* 保留默认值，允许用户在 rpc_config.h 或 CMake 覆盖 */
+#ifndef RINGBUF_DMA
 // #define RINGBUF_DMA
+#endif
 
 typedef struct
 {
