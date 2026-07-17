@@ -26,7 +26,6 @@ extern "C"
 #define DISPATCH_MAX_FUNC_CNT   256
 #define DISPATCH_ARGS_MAX_CNT   9
 #define DISPATCH_FUNC_NAME_MAX  64
-#define DISPATCH_SIG_MAX        128
 
 /*=============================================================
  * 状态码
@@ -55,6 +54,7 @@ typedef enum {
  *=============================================================*/
 typedef struct {
     const char*  name;
+    uint16_t     name_len;
     void*        handler;
     uint8_t      ret_type;                   // dispatch_type_t
     uint8_t      args_type[DISPATCH_ARGS_MAX_CNT];
@@ -87,21 +87,13 @@ void dispatch_init(void);
 dispatch_status_t _dispatch_add(const char* name, void* handler, const char* sig);
 
 /**
- * @brief 查找函数 (null-terminated name)
+ * @brief 查找函数
  *
- * @param name 函数名
- * @return dispatch_func_t* 找到的函数信息, NULL=未找到
- */
-dispatch_func_t* dispatch_find(const char* name);
-
-/**
- * @brief 查找函数 (长度限定, 非 null-terminate)
- *
- * @param name 函数名指针
+ * @param name 函数名指针 (不需要 null-terminate)
  * @param len  函数名长度
  * @return dispatch_func_t* 找到的函数信息, NULL=未找到
  */
-dispatch_func_t* dispatch_find_len(const char* name, uint16_t len);
+dispatch_func_t* dispatch_find(const char* name, uint16_t len);
 
 #ifdef __cplusplus
 }

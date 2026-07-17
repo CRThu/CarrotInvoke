@@ -196,6 +196,49 @@ uint16_t cmdscan_next(const cmd_scanner_t* scanner, uint16_t* next_start);
  */
 uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result);
 
+/**
+ * @brief 快速字节比较 (尾部优先)
+ *
+ * 策略: 长度不等 → 尾字节 → 首字节 → 中间
+ * 适配嵌入式命名习惯: 前缀相同后缀区分 (如 stm32_iic_write vs stm32_iic_read)
+ *
+ * @param a     比较源
+ * @param a_len 源长度
+ * @param b     比较目标
+ * @param b_len 目标长度
+ * @return 0 相等, 非0 不相等
+ */
+static inline int cmd_compare(const void* a, uint16_t a_len,
+                              const void* b, uint16_t b_len)
+{
+    /* 长度不等直接退出 */
+    if (a_len != b_len)
+        return (int)a_len - (int)b_len;
+
+    const uint8_t* pa = (const uint8_t*)a;
+    const uint8_t* pb = (const uint8_t*)b;
+    uint16_t len = a_len;
+
+    if (len == 0) return 0;
+
+    /* 尾字节快速退出 — 嵌入式命名后缀差异大 */
+    if (pa[len - 1] != pb[len - 1])
+        return (int)pa[len - 1] - (int)pb[len - 1];
+
+    /* 首字节快速退出 */
+    if (*pa != *pb)
+        return (int)*pa - (int)*pb;
+
+    /* 中间逐字节 (短字符串, 编译器易优化) */
+    for (uint16_t i = 1; i < len - 1; i++)
+    {
+        if (pa[i] != pb[i])
+            return (int)pa[i] - (int)pb[i];
+    }
+
+    return 0;
+}
+
 #ifdef __cplusplus
 }
 #endif

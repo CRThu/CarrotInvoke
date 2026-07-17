@@ -73,7 +73,7 @@ dispatch_status_t invoke_call(cmd_parse_result_t* result, invoke_ret_t* ret)
     }
 
     /* 1. 查找函数 */
-    dispatch_func_t* f = dispatch_find_len(result->func_name, result->func_name_len);
+    dispatch_func_t* f = dispatch_find(result->func_name, result->func_name_len);
     if (f == NULL)
     {
         printf("[ERROR]: Function not found.\r\n");

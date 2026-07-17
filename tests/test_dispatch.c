@@ -15,7 +15,7 @@ static void mock_proc(void* a, void* b, void* c) { (void)a; (void)b; (void)c; }
 void test_dispatch_init_empty(void)
 {
     dispatch_init();
-    dispatch_func_t* f = dispatch_find("hello");
+    dispatch_func_t* f = dispatch_find("hello", 5);
     TEST_ASSERT_NULL(f);
 }
 
@@ -25,7 +25,7 @@ void test_dispatch_init_clears(void)
     dispatch_reg(mock_hello, "hello()");
 
     dispatch_init(); /* clear */
-    dispatch_func_t* f = dispatch_find("hello");
+    dispatch_func_t* f = dispatch_find("hello", 5);
     TEST_ASSERT_NULL(f);
 }
 
@@ -36,7 +36,7 @@ void test_dispatch_register_and_find(void)
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find("hello");
+    dispatch_func_t* f = dispatch_find("hello", 5);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_STRING("hello", f->name);
     TEST_ASSERT_EQUAL_UINT8(DV, f->ret_type);
@@ -48,7 +48,7 @@ void test_dispatch_find_add(void)
     dispatch_init();
     dispatch_reg(mock_add, "add(i, i) -> i");
 
-    dispatch_func_t* f = dispatch_find("add");
+    dispatch_func_t* f = dispatch_find("add", 3);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(DI, f->ret_type);
     TEST_ASSERT_EQUAL_UINT8(2, f->args_count);
@@ -61,7 +61,7 @@ void test_dispatch_find_hex(void)
     dispatch_init();
     dispatch_reg(mock_add, "add(u, u) -> u");
 
-    dispatch_func_t* f = dispatch_find("add");
+    dispatch_func_t* f = dispatch_find("add", 3);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(DU, f->ret_type);
     TEST_ASSERT_EQUAL_UINT8(DU, f->args_type[0]);
@@ -73,7 +73,7 @@ void test_dispatch_find_string(void)
     dispatch_init();
     dispatch_reg(mock_hello, "echo(s) -> s");
 
-    dispatch_func_t* f = dispatch_find("echo");
+    dispatch_func_t* f = dispatch_find("echo", 4);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(DS, f->ret_type);
     TEST_ASSERT_EQUAL_UINT8(1, f->args_count);
@@ -85,7 +85,7 @@ void test_dispatch_find_proc(void)
     dispatch_init();
     dispatch_reg(mock_proc, "proc(s, i, u)");
 
-    dispatch_func_t* f = dispatch_find("proc");
+    dispatch_func_t* f = dispatch_find("proc", 4);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(DV, f->ret_type);
     TEST_ASSERT_EQUAL_UINT8(3, f->args_count);
@@ -102,7 +102,7 @@ void test_dispatch_sig_no_parens(void)
     dispatch_reg(mock_add, "i, i -> i");
 
     // 无 '(' 时, 名字用外部参数 "mock_add"
-    dispatch_func_t* f = dispatch_find("mock_add");
+    dispatch_func_t* f = dispatch_find("mock_add", 8);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(2, f->args_count);
 }
@@ -113,7 +113,7 @@ void test_dispatch_sig_empty_parens(void)
     dispatch_reg(mock_hello, "()");
 
     // 无函数名时, 名字用外部参数 "mock_hello"
-    dispatch_func_t* f = dispatch_find("mock_hello");
+    dispatch_func_t* f = dispatch_find("mock_hello", 10);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(0, f->args_count);
 }
@@ -124,7 +124,7 @@ void test_dispatch_sig_empty_string(void)
     dispatch_reg(mock_hello, "");
 
     // 空签名时, 名字用外部参数 "mock_hello"
-    dispatch_func_t* f = dispatch_find("mock_hello");
+    dispatch_func_t* f = dispatch_find("mock_hello", 10);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(0, f->args_count);
     TEST_ASSERT_EQUAL_UINT8(DV, f->ret_type);
@@ -135,7 +135,7 @@ void test_dispatch_sig_types(void)
     dispatch_init();
     dispatch_reg(mock_add, "add(i64, u64) -> f64");
 
-    dispatch_func_t* f = dispatch_find("add");
+    dispatch_func_t* f = dispatch_find("add", 3);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_UINT8(DF, f->ret_type);
     TEST_ASSERT_EQUAL_UINT8(DI, f->args_type[0]);
@@ -149,7 +149,7 @@ void test_dispatch_find_not_found(void)
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find("nonexistent");
+    dispatch_func_t* f = dispatch_find("nonexistent", 10);
     TEST_ASSERT_NULL(f);
 }
 
@@ -158,18 +158,18 @@ void test_dispatch_find_null_name(void)
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find(NULL);
+    dispatch_func_t* f = dispatch_find(NULL, 0);
     TEST_ASSERT_NULL(f);
 }
 
-/* ===== find_len ===== */
+/* ===== find with length ===== */
 
 void test_dispatch_find_len_basic(void)
 {
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find_len("hello", 5);
+    dispatch_func_t* f = dispatch_find("hello", 5);
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_STRING("hello", f->name);
 }
@@ -179,7 +179,7 @@ void test_dispatch_find_len_partial(void)
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find_len("hel", 3);
+    dispatch_func_t* f = dispatch_find("hel", 3);
     TEST_ASSERT_NULL(f);
 }
 
@@ -188,7 +188,7 @@ void test_dispatch_find_len_not_found(void)
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find_len("nonexistent", 10);
+    dispatch_func_t* f = dispatch_find("nonexistent", 10);
     TEST_ASSERT_NULL(f);
 }
 
@@ -197,7 +197,7 @@ void test_dispatch_find_len_zero_len(void)
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find_len("hello", 0);
+    dispatch_func_t* f = dispatch_find("hello", 0);
     TEST_ASSERT_NULL(f);
 }
 
@@ -206,7 +206,7 @@ void test_dispatch_find_len_null_name(void)
     dispatch_init();
     dispatch_reg(mock_hello, "hello()");
 
-    dispatch_func_t* f = dispatch_find_len(NULL, 5);
+    dispatch_func_t* f = dispatch_find(NULL, 5);
     TEST_ASSERT_NULL(f);
 }
 

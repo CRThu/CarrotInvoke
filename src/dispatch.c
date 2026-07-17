@@ -5,6 +5,7 @@
  * 完全自包含，运行时字符串签名注册
  *****************************/
 #include "dispatch.h"
+#include "cmdscan.h"
 #include <string.h>
 
 /*=============================================================
@@ -254,10 +255,12 @@ dispatch_status_t _dispatch_add(const char* name, void* handler, const char* sig
         memcpy(_name_bufs[_func_count], sig, name_len);
         _name_bufs[_func_count][name_len] = '\0';
         f->name = _name_bufs[_func_count];
+        f->name_len = name_len;
     }
     else
     {
         f->name = name;
+        f->name_len = (uint16_t)strlen(name);
     }
 
     f->handler = handler;
@@ -269,26 +272,14 @@ dispatch_status_t _dispatch_add(const char* name, void* handler, const char* sig
     return DISPATCH_OK;
 }
 
-dispatch_func_t* dispatch_find(const char* name)
-{
-    if (name == NULL) return NULL;
-
-    for (uint16_t i = 0; i < _func_count; i++)
-    {
-        if (_funcs[i].name != NULL && strcmp(_funcs[i].name, name) == 0)
-            return &_funcs[i];
-    }
-    return NULL;
-}
-
-dispatch_func_t* dispatch_find_len(const char* name, uint16_t len)
+dispatch_func_t* dispatch_find(const char* name, uint16_t len)
 {
     if (name == NULL || len == 0) return NULL;
 
-    char name_buf[DISPATCH_FUNC_NAME_MAX];
-    uint16_t copy_len = len < (DISPATCH_FUNC_NAME_MAX - 1) ? len : (DISPATCH_FUNC_NAME_MAX - 1);
-    memcpy(name_buf, name, copy_len);
-    name_buf[copy_len] = '\0';
-
-    return dispatch_find(name_buf);
+    for (uint16_t i = 0; i < _func_count; i++)
+    {
+        if (cmd_compare(_funcs[i].name, _funcs[i].name_len, name, len) == 0)
+            return &_funcs[i];
+    }
+    return NULL;
 }
