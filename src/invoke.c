@@ -5,8 +5,8 @@
  * cmd_scan → queue → cmd_parse → dispatch_find → invoke_call
  *****************************/
 #include "invoke.h"
+#include "rpclog.h"
 #include <string.h>
-#include <stdio.h>
 
 /*=============================================================
  * 内部：将 cmd_arg_t 转为类型化值，存入 staging buffer
@@ -69,7 +69,7 @@ dispatch_status_t invoke_call(dispatch_registry_t* reg,
 {
     if (result == NULL || result->func_name == NULL || result->func_name_len == 0)
     {
-        printf("[ERROR]: Invalid result.\r\n");
+        rpc_error("Invalid result.");
         return DISPATCH_ERR_NULL;
     }
 
@@ -77,7 +77,7 @@ dispatch_status_t invoke_call(dispatch_registry_t* reg,
     dispatch_func_t* f = dispatch_find(reg, result->func_name, result->func_name_len);
     if (f == NULL)
     {
-        printf("[ERROR]: Function not found.\r\n");
+        rpc_error("Function not found.");
         return DISPATCH_ERR_NOT_FOUND;
     }
 
@@ -86,8 +86,8 @@ dispatch_status_t invoke_call(dispatch_registry_t* reg,
     /* 2. 验证参数数量 */
     if (result->args_count != expected_args)
     {
-        printf("[ERROR]: Arg count mismatch: expected %d, got %d.\r\n",
-               expected_args, result->args_count);
+        rpc_error("Arg count mismatch: expected %d, got %d.",
+                  expected_args, result->args_count);
         return DISPATCH_ERR_SIG;
     }
 

@@ -22,6 +22,7 @@ extern int run_typeconv_tests(void);
 extern int run_dispatch_tests(void);
 extern int run_invoke_tests(void);
 extern int run_e2e_tests(void);
+extern int run_rpc_log_tests(void);
 
 int main(void)
 {
@@ -47,6 +48,9 @@ int main(void)
 
     printf("\n========== Invoke Tests ==========\n");
     failures += run_invoke_tests();
+
+    printf("\n========== RpcLog Tests ==========\n");
+    failures += run_rpc_log_tests();
 
     printf("\n========== SUMMARY ==========\n");
     if (failures == 0)

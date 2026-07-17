@@ -15,6 +15,7 @@ CarrotInvoke is a lightweight C dynamic function invocation framework for embedd
 - **Type-Safe Dispatch**: Runtime string signature registration with automatic type conversion (int64, uint64, string, float64)
 - **Return Value Capture**: Supports void, int64, and char* return types
 - **Embedded-Optimized**: No stdlib dependencies in core modules, tail-priority byte comparison for fast name matching
+- **Unified Logging**: `rpc_log` replaces printf with level-based logging (DEBUG/INFO/WARN/ERROR + protocol levels), zero stdio dependency
 
 ### Directory Structure
 
@@ -26,6 +27,7 @@ CarrotInvoke/
 │   ├── dispatch.h       # Function registration + lookup
 │   ├── invoke.h         # Dispatch execution engine
 │   ├── typeconv.h       # String <-> typed value conversion
+│   ├── rpclog.h        # Unified logging (replaces printf)
 │   └── ringbuf.h        # Generic ring buffer (optional DMA sync)
 ├── src/                 # Implementation
 ├── examples/            # Demo programs
@@ -43,6 +45,7 @@ CarrotInvoke/
 #include "invoke.h"
 #include "cmdscan.h"
 #include "cmdqueue.h"
+#include "rpclog.h"
 
 /* 1. Define handler functions */
 void LED_On(void* channel) {
@@ -60,7 +63,11 @@ dispatch_init(&dispatcher);
 dispatch_reg(&dispatcher, LED_On, "LED_On(i)");
 dispatch_reg(&dispatcher, add,    "add(i, i) -> i");
 
-/* 3. Parse and invoke */
+/* 3. Use rpc_log instead of printf */
+rpc_info("system ready");
+rpc_error("arg mismatch: expected %d, got %d", 3, 2);
+
+/* 4. Parse and invoke */
 cmd_args_t args;
 cmd_parse("add(10, 20)", 12, &args);
 
@@ -95,7 +102,7 @@ cmake --build build
 
 ### Testing
 
-194 tests across 7 suites: e2e, cmdscan, cmdqueue, ringbuf, typeconv, dispatch, invoke.
+245 tests across 8 suites: e2e, cmdscan, cmdqueue, ringbuf, typeconv, dispatch, invoke, rpc_log.
 
 ### License
 

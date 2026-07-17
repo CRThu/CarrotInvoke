@@ -13,6 +13,7 @@ add_library(carrot
     src/typeconv.c
     src/dispatch.c
     src/invoke.c
+    src/rpclog.c
 )
 target_include_directories(carrot PUBLIC inc)
 
@@ -30,6 +31,13 @@ add_executable(cmdqueue_demo
 target_link_libraries(cmdqueue_demo PRIVATE carrot)
 target_include_directories(cmdqueue_demo PRIVATE examples)
 
+# ---- RPC LOG Demo executable ----
+add_executable(rpclog_demo
+    examples/rpclog_demo.c
+)
+target_link_libraries(rpclog_demo PRIVATE carrot)
+target_include_directories(rpclog_demo PRIVATE examples)
+
 # ---- Test executable ----
 add_executable(carrot_tests
     vendor/unity/unity.c
@@ -42,6 +50,7 @@ add_executable(carrot_tests
     tests/test_invoke_helpers.c
     tests/test_invoke.c
     tests/test_e2e.c
+    tests/test_rpclog.c
     tests/main_test.c
 )
 target_link_libraries(carrot_tests PRIVATE carrot)
