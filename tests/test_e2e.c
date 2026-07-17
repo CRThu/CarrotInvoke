@@ -1,538 +1,513 @@
 /**
  * test_e2e.c — End-to-end tests for ASCII command -> function call pipeline
  *
- * Self-contained: defines its own mock functions and groups
- * to avoid depending on test_helpers.h (which now uses dispatch v2).
+ * Tests the complete new pipeline:
+ *   DMA buffer → cmd_scan → cmd_queue_push → cmd_queue_pop
+ *   → cmd_parse → dispatch_find → invoke_call
+ *
+ * Reuses test_invoke_helpers.h for mock functions and dispatch registry.
  */
 #include "unity.h"
-#include "fff.h"
-#include "dyncall.h"
-#include "cmdparse.h"
-#include "dynpool.h"
+#include "test_invoke_helpers.h"
+#include "cmdscan.h"
+#include "cmdqueue.h"
+#include "invoke.h"
 #include <string.h>
 
-/* ---- fff declarations for old e2e tests (void** params) ---- */
-DECLARE_FAKE_VOID_FUNC(print_hello_mock);
-DECLARE_FAKE_VALUE_FUNC(int64_t, print_add_mock, void**, void**);
-DECLARE_FAKE_VOID_FUNC(print_dec_mock, void**);
-DECLARE_FAKE_VOID_FUNC(print_hex_mock, void**);
-DECLARE_FAKE_VOID_FUNC(print_string_mock, void**);
-DECLARE_FAKE_VOID_FUNC(print_args_mock, void**, void**, void**);
+/* ===== Helper: run full new pipeline ===== */
 
-/* ---- fff global state ---- */
-DEFINE_FFF_GLOBALS;
-
-/* ---- fff definitions ---- */
-DEFINE_FAKE_VOID_FUNC(print_hello_mock);
-DEFINE_FAKE_VALUE_FUNC(int64_t, print_add_mock, void**, void**);
-DEFINE_FAKE_VOID_FUNC(print_dec_mock, void**);
-DEFINE_FAKE_VOID_FUNC(print_hex_mock, void**);
-DEFINE_FAKE_VOID_FUNC(print_string_mock, void**);
-DEFINE_FAKE_VOID_FUNC(print_args_mock, void**, void**, void**);
-
-/* ---- Old mock function group ---- */
-static function_group_t mock_func_group =
+static dispatch_status_t parse_and_invoke(const char* cmd)
 {
-    FUNCTION_GROUP("mock_func_group",
-        FUNCTION_INFO_NAME("print_hello",  print_hello_mock,  T_NULL, T_VOID),
-        FUNCTION_INFO_NAME("print_dec",    print_dec_mock,    T_NULL, T_DEC64),
-        FUNCTION_INFO_NAME("print_hex",    print_hex_mock,    T_NULL, T_HEX64),
-        FUNCTION_INFO_NAME("print_string", print_string_mock, T_NULL, T_STRING),
-        FUNCTION_INFO_NAME("print_add",    print_add_mock,    T_DEC64, T_DEC64, T_DEC64),
-        FUNCTION_INFO_NAME("print_args",   print_args_mock,   T_NULL, T_STRING, T_STRING, T_STRING),
-    )
-};
+    uint16_t len = (uint16_t)strlen(cmd);
 
-/* ---- Setup function for e2e tests ---- */
-static void e2e_setUp(void)
-{
-    dyncall_reset();
-    register_rpc_group(&mock_func_group);
-    RESET_FAKE(print_hello_mock);
-    RESET_FAKE(print_add_mock);
-    RESET_FAKE(print_dec_mock);
-    RESET_FAKE(print_hex_mock);
-    RESET_FAKE(print_string_mock);
-    RESET_FAKE(print_args_mock);
-}
+    cmd_scanner_t scanner;
+    cmd_init(&scanner, (const uint8_t*)cmd, len);
 
-/* Helper: parse + invoke_by_cmd, return dyncall status */
-static dyncall_status_t parse_and_invoke(const char* cmd)
-{
-    dynpool_t pool;
-    uint16_t len;
-    cmd_parse_status_t ps = cmdparse_from_string(&pool, cmd, &len);
-    if (ps != CMDPARSE_OK) return DYNCALL_ERR_POOL;
-    return invoke_by_cmd(&pool);
+    cmd_queue_t queue;
+    cmd_queue_init(&queue);
+
+    cmd_entry_t entry;
+    while (cmd_scan(&scanner, &entry) == CMD_COMPLETE)
+    {
+        cmd_queue_push(&queue, &entry);
+    }
+
+    dispatch_status_t last_status = DISPATCH_OK;
+    while (!cmd_queue_is_empty(&queue))
+    {
+        cmd_queue_pop(&queue, &entry);
+
+        cmd_args_t result;
+        cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
+
+        last_status = invoke_call(&invoke_dispatcher, &result, NULL);
+    }
+
+    return last_status;
 }
 
 /* =================================================================
- * GROUP 1: print_hello() — void function, zero args
+ * GROUP 1: hello() — void function, zero args
  * ================================================================= */
 
 /* --- Command format variants --- */
 void test_e2e_hello_parens(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello()");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello()");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_no_parens(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_parens_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello()\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello()\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_lf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_cr(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello\r");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello\r");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 /* --- Whitespace variants --- */
 void test_e2e_hello_space_inside_parens(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello( )");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello( )");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_leading_space(void)
 {
-    dyncall_status_t s = parse_and_invoke(" print_hello()");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke(" hello()");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_trailing_space(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hello() ");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello() ");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_tabs(void)
 {
-    dyncall_status_t s = parse_and_invoke("\tprint_hello\t");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("\thello\t");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_hello_mixed_whitespace(void)
 {
-    dyncall_status_t s = parse_and_invoke("  \t print_hello() \t\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hello_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("  \t hello() \t\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
 
 /* =================================================================
- * GROUP 2: print_dec(int64_t) — signed decimal, 1 arg
+ * GROUP 2: dec(int64_t) — signed decimal, 1 arg
  * ================================================================= */
 
 void test_e2e_dec_positive(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec(42)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(42, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec(42)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(42, invoke_captured.dec_val);
 }
 
 void test_e2e_dec_negative(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec(-100)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(-100, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec(-100)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(-100, invoke_captured.dec_val);
 }
 
 void test_e2e_dec_zero(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec(0)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(0, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec(0)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(0, invoke_captured.dec_val);
 }
 
 void test_e2e_dec_large(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec(9223372036854775807)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(9223372036854775807LL, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec(9223372036854775807)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(9223372036854775807LL, invoke_captured.dec_val);
 }
 
 void test_e2e_dec_negative_large(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec(-9223372036854775807)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(-9223372036854775807LL, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec(-9223372036854775807)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(-9223372036854775807LL, invoke_captured.dec_val);
 }
 
 /* --- Space-separated style --- */
 void test_e2e_dec_space_separated(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec 12345");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(12345, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec 12345");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(12345, invoke_captured.dec_val);
 }
 
 /* --- Whitespace around arg --- */
 void test_e2e_dec_spaces_around_arg(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec( 123 )");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(123, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec( 123 )");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(123, invoke_captured.dec_val);
 }
 
 void test_e2e_dec_tab_around_arg(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec(\t42\t)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(42, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec(\t42\t)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(42, invoke_captured.dec_val);
 }
 
 void test_e2e_dec_with_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec(42)\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(42, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec(42)\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(42, invoke_captured.dec_val);
 }
 
 void test_e2e_dec_space_with_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_dec 42\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_dec_mock_fake.call_count);
-    int64_t val = *(int64_t*)*print_dec_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_INT64(42, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("dec 42\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(42, invoke_captured.dec_val);
 }
 
 /* =================================================================
- * GROUP 3: print_hex(uint64_t) — unsigned hex, 1 arg
+ * GROUP 3: hex(uint64_t) — unsigned hex, 1 arg
  * ================================================================= */
 
 void test_e2e_hex_basic(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hex(FF)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hex_mock_fake.call_count);
-    uint64_t val = *(uint64_t*)*print_hex_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_HEX64(0xFF, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hex(FF)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hex_fake.call_count);
+    TEST_ASSERT_EQUAL_HEX64(0xFF, invoke_captured.hex_val);
 }
 
 void test_e2e_hex_with_prefix(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hex(0xABCDEF)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hex_mock_fake.call_count);
-    uint64_t val = *(uint64_t*)*print_hex_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_HEX64(0xABCDEF, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hex(0xABCDEF)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hex_fake.call_count);
+    TEST_ASSERT_EQUAL_HEX64(0xABCDEF, invoke_captured.hex_val);
 }
 
 void test_e2e_hex_space_separated(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hex DEADBEEF");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hex_mock_fake.call_count);
-    uint64_t val = *(uint64_t*)*print_hex_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_HEX64(0xDEADBEEF, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hex DEADBEEF");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hex_fake.call_count);
+    TEST_ASSERT_EQUAL_HEX64(0xDEADBEEF, invoke_captured.hex_val);
 }
 
 void test_e2e_hex_space_separated_with_0x(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hex 0x1234");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hex_mock_fake.call_count);
-    uint64_t val = *(uint64_t*)*print_hex_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_HEX64(0x1234, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hex 0x1234");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hex_fake.call_count);
+    TEST_ASSERT_EQUAL_HEX64(0x1234, invoke_captured.hex_val);
 }
 
 void test_e2e_hex_zero(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hex(0)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hex_mock_fake.call_count);
-    uint64_t val = *(uint64_t*)*print_hex_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_HEX64(0, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hex(0)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hex_fake.call_count);
+    TEST_ASSERT_EQUAL_HEX64(0, invoke_captured.hex_val);
 }
 
 void test_e2e_hex_with_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hex(FF)\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hex_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hex(FF)\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hex_fake.call_count);
+    TEST_ASSERT_EQUAL_HEX64(0xFF, invoke_captured.hex_val);
 }
 
 void test_e2e_hex_spaces_around_arg(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hex( FF )");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_hex_mock_fake.call_count);
-    uint64_t val = *(uint64_t*)*print_hex_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_HEX64(0xFF, val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hex( FF )");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_hex_fake.call_count);
+    TEST_ASSERT_EQUAL_HEX64(0xFF, invoke_captured.hex_val);
 }
 
 /* =================================================================
- * GROUP 4: print_string(char*) — string, 1 arg
+ * GROUP 4: str(char*) — string, 1 arg
  * ================================================================= */
 
 void test_e2e_string_basic(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_string(hello)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_string_mock_fake.call_count);
-    char* val = *(char**)*print_string_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_STRING("hello", val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("str(hello)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_string_fake.call_count);
+    TEST_ASSERT_EQUAL_STRING("hello", invoke_captured.str_val);
 }
 
 void test_e2e_string_with_spaces(void)
 {
-    /* Parser treats spaces as separators, so "hello world" becomes "hello" */
-    dyncall_status_t s = parse_and_invoke("print_string(  hello world  )");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_string_mock_fake.call_count);
-    char* val = *(char**)*print_string_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_STRING("hello", val);
+    /* Parser treats spaces as separators, so "hello world" becomes 2 tokens.
+       str expects 1 arg → arg count mismatch */
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("str(  hello world  )");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_SIG, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_string_fake.call_count);
 }
 
 void test_e2e_string_space_separated(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_string hello");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_string_mock_fake.call_count);
-    char* val = *(char**)*print_string_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_STRING("hello", val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("str hello");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_string_fake.call_count);
+    TEST_ASSERT_EQUAL_STRING("hello", invoke_captured.str_val);
 }
 
 void test_e2e_string_with_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_string(hello)\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_string_mock_fake.call_count);
-    char* val = *(char**)*print_string_mock_fake.arg0_val;
-    TEST_ASSERT_EQUAL_STRING("hello", val);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("str(hello)\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_string_fake.call_count);
+    TEST_ASSERT_EQUAL_STRING("hello", invoke_captured.str_val);
 }
 
 void test_e2e_string_empty_parens(void)
 {
-    /* Empty string in parens — should parse but empty args won't reach the function */
-    dyncall_status_t s = parse_and_invoke("print_string()");
-    /* The function expects 1 arg; with 0 args in pool, invoke should still succeed
-       but the arg won't be set correctly. This tests edge behavior. */
-    /* parse_and_invoke will try to invoke but pool has no string arg.
-       The behavior depends on how invoke_by_pool handles missing args. */
-    (void)s; /* Accept any result — this is an edge case */
+    /* Empty string in parens — str expects 1 arg, got 0 → arg count mismatch */
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("str()");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_SIG, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_string_fake.call_count);
 }
 
 /* =================================================================
- * GROUP 5: print_add(int64_t, int64_t) — 2 args, both DEC64
+ * GROUP 5: add(int64_t, int64_t) — 2 args, both DEC64
  * ================================================================= */
 
 void test_e2e_add_basic(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add(10,20)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
-    int64_t a = *(int64_t*)*print_add_mock_fake.arg0_val;
-    int64_t b = *(int64_t*)*print_add_mock_fake.arg1_val;
-    TEST_ASSERT_EQUAL_INT64(10, a);
-    TEST_ASSERT_EQUAL_INT64(20, b);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add(10,20)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(10, invoke_captured.add_a);
+    TEST_ASSERT_EQUAL_INT64(20, invoke_captured.add_b);
 }
 
 void test_e2e_add_negative(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add(-5,3)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
-    int64_t a = *(int64_t*)*print_add_mock_fake.arg0_val;
-    int64_t b = *(int64_t*)*print_add_mock_fake.arg1_val;
-    TEST_ASSERT_EQUAL_INT64(-5, a);
-    TEST_ASSERT_EQUAL_INT64(3, b);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add(-5,3)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(-5, invoke_captured.add_a);
+    TEST_ASSERT_EQUAL_INT64(3, invoke_captured.add_b);
 }
 
 void test_e2e_add_space_separated(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add 100 200");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
-    int64_t a = *(int64_t*)*print_add_mock_fake.arg0_val;
-    int64_t b = *(int64_t*)*print_add_mock_fake.arg1_val;
-    TEST_ASSERT_EQUAL_INT64(100, a);
-    TEST_ASSERT_EQUAL_INT64(200, b);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add 100 200");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(100, invoke_captured.add_a);
+    TEST_ASSERT_EQUAL_INT64(200, invoke_captured.add_b);
 }
 
 void test_e2e_add_comma_spaces(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add( 1 , 2 )");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
-    int64_t a = *(int64_t*)*print_add_mock_fake.arg0_val;
-    int64_t b = *(int64_t*)*print_add_mock_fake.arg1_val;
-    TEST_ASSERT_EQUAL_INT64(1, a);
-    TEST_ASSERT_EQUAL_INT64(2, b);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add( 1 , 2 )");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(1, invoke_captured.add_a);
+    TEST_ASSERT_EQUAL_INT64(2, invoke_captured.add_b);
 }
 
 void test_e2e_add_semicolon_separator(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add(1;2)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
-    int64_t a = *(int64_t*)*print_add_mock_fake.arg0_val;
-    int64_t b = *(int64_t*)*print_add_mock_fake.arg1_val;
-    TEST_ASSERT_EQUAL_INT64(1, a);
-    TEST_ASSERT_EQUAL_INT64(2, b);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add(1;2)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(1, invoke_captured.add_a);
+    TEST_ASSERT_EQUAL_INT64(2, invoke_captured.add_b);
 }
 
 void test_e2e_add_mixed_separators(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add(1, 2 )");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
-    int64_t a = *(int64_t*)*print_add_mock_fake.arg0_val;
-    int64_t b = *(int64_t*)*print_add_mock_fake.arg1_val;
-    TEST_ASSERT_EQUAL_INT64(1, a);
-    TEST_ASSERT_EQUAL_INT64(2, b);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add(1, 2 )");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(1, invoke_captured.add_a);
+    TEST_ASSERT_EQUAL_INT64(2, invoke_captured.add_b);
 }
 
 void test_e2e_add_with_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add(10,20)\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add(10,20)\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
 }
 
 void test_e2e_add_with_lf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add(10,20)\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add(10,20)\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
 }
 
 void test_e2e_add_zeroes(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_add(0,0)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_add_mock_fake.call_count);
-    int64_t a = *(int64_t*)*print_add_mock_fake.arg0_val;
-    int64_t b = *(int64_t*)*print_add_mock_fake.arg1_val;
-    TEST_ASSERT_EQUAL_INT64(0, a);
-    TEST_ASSERT_EQUAL_INT64(0, b);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("add(0,0)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT64(0, invoke_captured.add_a);
+    TEST_ASSERT_EQUAL_INT64(0, invoke_captured.add_b);
 }
 
 /* =================================================================
- * GROUP 6: print_args(char*, char*, char*) — 3 string args
+ * GROUP 6: args(char*, char*, char*) — 3 string args
  * ================================================================= */
 
 void test_e2e_args_basic(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_args(a,b,c)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_args_mock_fake.call_count);
-    char* a0 = *(char**)*print_args_mock_fake.arg0_val;
-    char* a1 = *(char**)*print_args_mock_fake.arg1_val;
-    char* a2 = *(char**)*print_args_mock_fake.arg2_val;
-    TEST_ASSERT_EQUAL_STRING("a", a0);
-    TEST_ASSERT_EQUAL_STRING("b", a1);
-    TEST_ASSERT_EQUAL_STRING("c", a2);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("args(a,b,c)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_args_fake.call_count);
+    TEST_ASSERT_EQUAL_STRING("a", invoke_captured.arg0);
+    TEST_ASSERT_EQUAL_STRING("b", invoke_captured.arg1);
+    TEST_ASSERT_EQUAL_STRING("c", invoke_captured.arg2);
 }
 
 void test_e2e_args_space_separated(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_args hello world test");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_args_mock_fake.call_count);
-    char* a0 = *(char**)*print_args_mock_fake.arg0_val;
-    char* a1 = *(char**)*print_args_mock_fake.arg1_val;
-    char* a2 = *(char**)*print_args_mock_fake.arg2_val;
-    TEST_ASSERT_EQUAL_STRING("hello", a0);
-    TEST_ASSERT_EQUAL_STRING("world", a1);
-    TEST_ASSERT_EQUAL_STRING("test", a2);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("args hello world test");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_args_fake.call_count);
+    TEST_ASSERT_EQUAL_STRING("hello", invoke_captured.arg0);
+    TEST_ASSERT_EQUAL_STRING("world", invoke_captured.arg1);
+    TEST_ASSERT_EQUAL_STRING("test", invoke_captured.arg2);
 }
 
 void test_e2e_args_with_spaces_in_values(void)
 {
-    /* Parser treats spaces as separators, so "hello world" becomes "hello" */
-    dyncall_status_t s = parse_and_invoke("print_args( hello world , foo bar , baz )");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_args_mock_fake.call_count);
-    char* a0 = *(char**)*print_args_mock_fake.arg0_val;
-    char* a1 = *(char**)*print_args_mock_fake.arg1_val;
-    char* a2 = *(char**)*print_args_mock_fake.arg2_val;
-    TEST_ASSERT_EQUAL_STRING("hello", a0);
-    TEST_ASSERT_EQUAL_STRING("world", a1);
-    TEST_ASSERT_EQUAL_STRING("foo", a2);
+    /* Parser treats spaces as separators: "hello world , foo bar , baz"
+       parses as 5 tokens: hello, world, foo, bar, baz.
+       args expects 3 → arg count mismatch */
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("args( hello world , foo bar , baz )");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_SIG, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_args_fake.call_count);
 }
 
 void test_e2e_args_with_crlf(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_args(a,b,c)\r\n");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_args_mock_fake.call_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("args(a,b,c)\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_args_fake.call_count);
 }
 
 void test_e2e_args_semicolon_sep(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_args(a;b;c)");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_args_mock_fake.call_count);
-    char* a0 = *(char**)*print_args_mock_fake.arg0_val;
-    char* a1 = *(char**)*print_args_mock_fake.arg1_val;
-    char* a2 = *(char**)*print_args_mock_fake.arg2_val;
-    TEST_ASSERT_EQUAL_STRING("a", a0);
-    TEST_ASSERT_EQUAL_STRING("b", a1);
-    TEST_ASSERT_EQUAL_STRING("c", a2);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("args(a;b;c)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(1, invoke_mock_args_fake.call_count);
+    TEST_ASSERT_EQUAL_STRING("a", invoke_captured.arg0);
+    TEST_ASSERT_EQUAL_STRING("b", invoke_captured.arg1);
+    TEST_ASSERT_EQUAL_STRING("c", invoke_captured.arg2);
 }
 
 void test_e2e_args_mixed_brackets(void)
 {
-    /* Using curly braces and square brackets */
-    dyncall_status_t s = parse_and_invoke("print_args{a}{b}{c}");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_INT(1, print_args_mock_fake.call_count);
-    char* a0 = *(char**)*print_args_mock_fake.arg0_val;
-    char* a1 = *(char**)*print_args_mock_fake.arg1_val;
-    char* a2 = *(char**)*print_args_mock_fake.arg2_val;
-    TEST_ASSERT_EQUAL_STRING("a", a0);
-    TEST_ASSERT_EQUAL_STRING("b", a1);
-    TEST_ASSERT_EQUAL_STRING("c", a2);
+    /* cmd_scan only handles (), not {} or [].
+       "args{a}{b}{c}" — cmd_scan scans past {} treating them as regular chars,
+       extracting the whole thing as function name "args{a}{b}{c}" which is not found */
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("args{a}{b}{c}");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_args_fake.call_count);
 }
 
 /* =================================================================
@@ -541,61 +516,56 @@ void test_e2e_args_mixed_brackets(void)
 
 void test_e2e_error_nonexistent_function(void)
 {
-    dyncall_status_t s = parse_and_invoke("nonexistent()");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_FUNC_NOT_FOUND, s);
-    TEST_ASSERT_EQUAL_INT(0, print_hello_mock_fake.call_count);
+    dispatch_status_t s = parse_and_invoke("nonexistent()");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_error_nonexistent_space(void)
 {
-    dyncall_status_t s = parse_and_invoke("nonexistent arg1");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_FUNC_NOT_FOUND, s);
-    TEST_ASSERT_EQUAL_INT(0, print_hello_mock_fake.call_count);
+    dispatch_status_t s = parse_and_invoke("nonexistent arg1");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_error_empty_string(void)
 {
-    /* Empty string — parser behavior may vary, but should not crash */
-    dynpool_t pool;
-    uint16_t len;
-    cmd_parse_status_t ps = cmdparse_from_string(&pool, "", &len);
-    /* Empty string: terminates at \0 immediately, pool gets 0 tokens or the empty token */
-    /* We just verify no crash */
-    (void)ps;
-    (void)pool;
+    /* Empty buffer — cmd_scan finds no command, pipeline returns OK with no calls */
+    dispatch_status_t s = parse_and_invoke("");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_error_whitespace_only(void)
 {
-    dynpool_t pool;
-    uint16_t len;
-    cmd_parse_status_t ps = cmdparse_from_string(&pool, "   ", &len);
-    /* Whitespace only — should return OK or INVALID depending on parser */
-    /* No crash is the key assertion */
-    (void)ps;
-    (void)pool;
+    /* Whitespace only — cmd_scan skips all, returns INCOMPLETE */
+    dispatch_status_t s = parse_and_invoke("   ");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_error_unclosed_paren(void)
 {
-    dynpool_t pool;
-    uint16_t len;
-    cmd_parse_status_t ps = cmdparse_from_string(&pool, "print_hello(", &len);
-    TEST_ASSERT_EQUAL_INT(CMDPARSE_INVALID_FORMAT, ps);
+    /* "hello(" — cmd_scan returns CMD_INCOMPLETE (no terminator found inside parens),
+       so no command is extracted and no function is called */
+    dispatch_status_t s = parse_and_invoke("hello(");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(0, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_error_unmatched_close_paren(void)
 {
-    dynpool_t pool;
-    uint16_t len;
-    cmd_parse_status_t ps = cmdparse_from_string(&pool, "print_hello)", &len);
-    TEST_ASSERT_EQUAL_INT(CMDPARSE_INVALID_FORMAT, ps);
+    /* "hello)" — cmd_scan extracts "hello)" as complete command (6 chars).
+       cmd_parse extracts function name "hello)" (length 6, not terminated at ')').
+       dispatch_find("hello)", 6) → not found */
+    dispatch_status_t s = parse_and_invoke("hello)");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
 }
 
 void test_e2e_error_partial_match(void)
 {
-    dyncall_status_t s = parse_and_invoke("print_hel");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_FUNC_NOT_FOUND, s);
+    dispatch_status_t s = parse_and_invoke("hell");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
 }
 
 /* =================================================================
@@ -604,16 +574,18 @@ void test_e2e_error_partial_match(void)
 
 void test_e2e_args_only_1(void)
 {
-    /* Just "1" — no function name, parser will put "1" as first token */
-    dyncall_status_t s = parse_and_invoke("1");
-    /* This should fail: no function named "1" */
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_FUNC_NOT_FOUND, s);
+    /* "1" — cmd_scan extracts "1" as command, cmd_parse extracts function name "1",
+       dispatch_find("1", 1) → not found */
+    dispatch_status_t s = parse_and_invoke("1");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
 }
 
 void test_e2e_args_only_2(void)
 {
-    dyncall_status_t s = parse_and_invoke("1 2 3");
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_FUNC_NOT_FOUND, s);
+    /* "1 2 3" — cmd_scan extracts "1 2 3", cmd_parse sees "1" as function name
+       with "2" and "3" as space-separated args. dispatch_find("1", 1) → not found */
+    dispatch_status_t s = parse_and_invoke("1 2 3");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
 }
 
 /* =================================================================
@@ -622,49 +594,42 @@ void test_e2e_args_only_2(void)
 
 void test_e2e_two_commands_lf(void)
 {
-    dynpool_t pool;
-    uint16_t len;
-    cmd_parse_status_t ps = cmdparse_from_string(&pool, "print_hello()\nprint_hello()", &len);
-    TEST_ASSERT_EQUAL_INT(CMDPARSE_OK, ps);
-    /* The first command "print_hello()" is parsed (13 chars + 1 for \n = 14) */
-    TEST_ASSERT_EQUAL_INT(14, len);
-    /* First command has function name only */
-    TEST_ASSERT_EQUAL_UINT16(1, pool.wr_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello()\nhello()");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(2, invoke_mock_hello_fake.call_count);
 }
 
 void test_e2e_two_commands_crlf(void)
 {
-    dynpool_t pool;
-    uint16_t len;
-    cmd_parse_status_t ps = cmdparse_from_string(&pool, "print_hello()\r\nprint_hello()\r\n", &len);
-    TEST_ASSERT_EQUAL_INT(CMDPARSE_OK, ps);
-    /* \r\n = 2 chars terminator + \r is whitespace */
-    TEST_ASSERT_EQUAL_UINT16(1, pool.wr_count);
+    invoke_test_helpers_reset();
+    dispatch_status_t s = parse_and_invoke("hello()\r\nhello()\r\n");
+    TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
+    TEST_ASSERT_EQUAL_INT(2, invoke_mock_hello_fake.call_count);
 }
 
 /* =================================================================
- * GROUP 10: dyncall_reset test
+ * GROUP 10: dispatch_init test
  * ================================================================= */
 
-void test_e2e_reset_clears_groups(void)
+void test_e2e_reset_clears_registry(void)
 {
-    /* After setUp, mock_func_group is registered */
-    function_info_t* f = find_func("print_hello");
+    /* After setUp, hello is registered */
+    dispatch_func_t* f = dispatch_find(&invoke_dispatcher, "hello", 5);
     TEST_ASSERT_NOT_NULL(f);
 
-    dyncall_reset();
+    dispatch_init(&invoke_dispatcher);
 
-    f = find_func("print_hello");
+    f = dispatch_find(&invoke_dispatcher, "hello", 5);
     TEST_ASSERT_NULL(f);
 }
 
 void test_e2e_reset_allows_re_register(void)
 {
-    dyncall_reset();
-    dyncall_status_t s = register_rpc_group(&mock_func_group);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    dispatch_init(&invoke_dispatcher);
+    dispatch_reg(&invoke_dispatcher, invoke_mock_hello, "hello()");
 
-    function_info_t* f = find_func("print_hello");
+    dispatch_func_t* f = dispatch_find(&invoke_dispatcher, "hello", 5);
     TEST_ASSERT_NOT_NULL(f);
 }
 
@@ -676,7 +641,7 @@ int run_e2e_tests(void)
 {
     UNITY_BEGIN();
 
-    /* Group 1: print_hello */
+    /* Group 1: hello */
     RUN_TEST(test_e2e_hello_parens);
     RUN_TEST(test_e2e_hello_no_parens);
     RUN_TEST(test_e2e_hello_crlf);
@@ -689,7 +654,7 @@ int run_e2e_tests(void)
     RUN_TEST(test_e2e_hello_tabs);
     RUN_TEST(test_e2e_hello_mixed_whitespace);
 
-    /* Group 2: print_dec */
+    /* Group 2: dec */
     RUN_TEST(test_e2e_dec_positive);
     RUN_TEST(test_e2e_dec_negative);
     RUN_TEST(test_e2e_dec_zero);
@@ -701,7 +666,7 @@ int run_e2e_tests(void)
     RUN_TEST(test_e2e_dec_with_crlf);
     RUN_TEST(test_e2e_dec_space_with_crlf);
 
-    /* Group 3: print_hex */
+    /* Group 3: hex */
     RUN_TEST(test_e2e_hex_basic);
     RUN_TEST(test_e2e_hex_with_prefix);
     RUN_TEST(test_e2e_hex_space_separated);
@@ -710,14 +675,14 @@ int run_e2e_tests(void)
     RUN_TEST(test_e2e_hex_with_crlf);
     RUN_TEST(test_e2e_hex_spaces_around_arg);
 
-    /* Group 4: print_string */
+    /* Group 4: string */
     RUN_TEST(test_e2e_string_basic);
     RUN_TEST(test_e2e_string_with_spaces);
     RUN_TEST(test_e2e_string_space_separated);
     RUN_TEST(test_e2e_string_with_crlf);
     RUN_TEST(test_e2e_string_empty_parens);
 
-    /* Group 5: print_add (2 args) */
+    /* Group 5: add (2 args) */
     RUN_TEST(test_e2e_add_basic);
     RUN_TEST(test_e2e_add_negative);
     RUN_TEST(test_e2e_add_space_separated);
@@ -728,7 +693,7 @@ int run_e2e_tests(void)
     RUN_TEST(test_e2e_add_with_lf);
     RUN_TEST(test_e2e_add_zeroes);
 
-    /* Group 6: print_args (3 string args) */
+    /* Group 6: args (3 string args) */
     RUN_TEST(test_e2e_args_basic);
     RUN_TEST(test_e2e_args_space_separated);
     RUN_TEST(test_e2e_args_with_spaces_in_values);
@@ -754,7 +719,7 @@ int run_e2e_tests(void)
     RUN_TEST(test_e2e_two_commands_crlf);
 
     /* Group 10: Reset */
-    RUN_TEST(test_e2e_reset_clears_groups);
+    RUN_TEST(test_e2e_reset_clears_registry);
     RUN_TEST(test_e2e_reset_allows_re_register);
 
     return UNITY_END();

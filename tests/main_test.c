@@ -24,6 +24,7 @@ extern int run_ringbuf_tests(void);
 extern int run_typeconv_tests(void);
 extern int run_dispatch_tests(void);
 extern int run_invoke_tests(void);
+extern int run_e2e_tests(void);
 
 int main(void)
 {
@@ -36,8 +37,9 @@ int main(void)
     // failures += run_cmdparse_tests();
     // printf("\n========== DynCall Tests ==========\n");
     // failures += run_dyncall_tests();
-    // printf("\n========== E2E Tests ==========\n");
-    // failures += run_e2e_tests();
+
+    printf("\n========== E2E Tests ==========\n");
+    failures += run_e2e_tests();
 
     printf("\n========== CmdScan Tests ==========\n");
     failures += run_cmdscan_tests();

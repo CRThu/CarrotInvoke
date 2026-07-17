@@ -52,7 +52,7 @@ add_executable(carrot_tests
     # tests/test_dyncall.c  # old dyncall tests, disabled
     tests/test_cmdqueue.c
     tests/test_ringbuf.c
-    # tests/test_e2e.c      # old dyncall e2e tests, disabled
+    tests/test_e2e.c
     tests/test_typeconv.c
     tests/test_dispatch.c
     tests/test_invoke_helpers.c
