@@ -18,25 +18,25 @@ void cmd_queue_init(cmd_queue_t* queue)
     queue->count = 0;
 }
 
-dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_entry_t* entry)
+cmd_queue_status_t cmd_queue_push(cmd_queue_t* queue, cmd_entry_t* entry)
 {
     if (queue == NULL || entry == NULL)
-        return DYNCALL_ERR_NULL_OBJECT;
+        return CMDQUEUE_ERR_NULL;
 
     if (entry->cmd_len == 0)
-        return DYNCALL_ERR_NULL_OBJECT;
+        return CMDQUEUE_ERR_NULL;
 
     if (queue->count >= CMD_QUEUE_SIZE)
-        return DYNCALL_ERR_POOL;
+        return CMDQUEUE_ERR_FULL;
 
     if (ringbuf_writable(&queue->ring) < entry->cmd_len)
-        return DYNCALL_ERR_POOL;
+        return CMDQUEUE_ERR_FULL;
 
     const uint8_t* src = (const uint8_t*)&entry->buf[entry->cmd_start];
     uint16_t written = ringbuf_write(&queue->ring, src, entry->cmd_len);
 
     if (written != entry->cmd_len)
-        return DYNCALL_ERR_POOL;
+        return CMDQUEUE_ERR_FULL;
 
     cmd_entry_t* item = &queue->items[queue->tail];
     item->buf = queue->ring.buf;
@@ -48,16 +48,16 @@ dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_entry_t* entry)
     queue->tail = (queue->tail + 1) % CMD_QUEUE_SIZE;
     queue->count++;
 
-    return DYNCALL_NO_ERROR;
+    return CMDQUEUE_OK;
 }
 
-dyncall_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_entry_t* entry)
+cmd_queue_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_entry_t* entry)
 {
     if (queue == NULL || entry == NULL)
-        return DYNCALL_ERR_NULL_OBJECT;
+        return CMDQUEUE_ERR_NULL;
 
     if (queue->count == 0)
-        return DYNCALL_ERR_POOL;
+        return CMDQUEUE_ERR_FULL;
 
     cmd_entry_t* item = &queue->items[queue->head];
     *entry = *item;
@@ -67,7 +67,7 @@ dyncall_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_entry_t* entry)
     queue->head = (queue->head + 1) % CMD_QUEUE_SIZE;
     queue->count--;
 
-    return DYNCALL_NO_ERROR;
+    return CMDQUEUE_OK;
 }
 
 uint8_t cmd_queue_is_empty(cmd_queue_t* queue)

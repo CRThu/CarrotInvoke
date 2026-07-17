@@ -3,8 +3,8 @@
 * 演示如何使用命令解析器
 *****************************/
 #include "cmdscan.h"
-#include "dyncall.h"
 #include <stdio.h>
+#include <string.h>
 
 /*=============================================================
  * 模拟 DMA 缓冲区
@@ -53,17 +53,6 @@ void cmd_get_status(void)
 {
     printf("[RPC] cmd_get_status()\r\n");
 }
-
-/* 注册函数组 */
-function_group_t cmd_group =
-{
-    FUNCTION_GROUP("cmd",
-        FUNCTION_INFO(cmd_on, T_NULL, T_DEC64),
-        FUNCTION_INFO(cmd_off, T_NULL, T_DEC64),
-        FUNCTION_INFO(cmd_set_speed, T_NULL, T_DEC64, T_DEC64),
-        FUNCTION_INFO(cmd_get_status, T_NULL, T_VOID)
-    )
-};
 
 /*=============================================================
  * 主程序 - 演示命令解析流程
@@ -323,9 +312,6 @@ int main(void)
 {
     printf("CMD 零拷贝命令解析器示例\r\n");
     printf("================================\r\n\r\n");
-    
-    /* 注册函数组（用于 dyncall） */
-    register_rpc_group(&cmd_group);
     
     /* 运行示例 */
     demo_single_command();

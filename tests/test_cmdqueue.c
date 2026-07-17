@@ -28,14 +28,14 @@ void test_cmdqueue_push_pop_simple(void)
     cmd_entry_t entry;
     cmd_scan(&scanner, &entry);
 
-    dyncall_status_t s = cmd_queue_push(&queue, &entry);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    cmd_queue_status_t s = cmd_queue_push(&queue, &entry);
+    TEST_ASSERT_EQUAL_INT(CMDQUEUE_OK, s);
     TEST_ASSERT_FALSE(cmd_queue_is_empty(&queue));
     TEST_ASSERT_EQUAL_UINT8(1, cmd_queue_count(&queue));
 
     cmd_entry_t entry_out;
     s = cmd_queue_pop(&queue, &entry_out);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+    TEST_ASSERT_EQUAL_INT(CMDQUEUE_OK, s);
     TEST_ASSERT_EQUAL_UINT16(10, entry_out.cmd_len);
     TEST_ASSERT_EQUAL_UINT8(5, entry_out.func_len);
 
@@ -87,14 +87,14 @@ void test_cmdqueue_push_full(void)
 
     for (uint8_t i = 0; i < CMD_QUEUE_SIZE; i++)
     {
-        dyncall_status_t s = cmd_queue_push(&queue, &entry);
-        TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+        cmd_queue_status_t s = cmd_queue_push(&queue, &entry);
+        TEST_ASSERT_EQUAL_INT(CMDQUEUE_OK, s);
     }
 
     TEST_ASSERT_TRUE(cmd_queue_is_full(&queue));
 
-    dyncall_status_t s = cmd_queue_push(&queue, &entry);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_POOL, s);
+    cmd_queue_status_t s = cmd_queue_push(&queue, &entry);
+    TEST_ASSERT_EQUAL_INT(CMDQUEUE_ERR_FULL, s);
 }
 
 /* ===== pop empty ===== */
@@ -103,8 +103,8 @@ void test_cmdqueue_pop_empty(void)
     cmd_queue_init(&queue);
 
     cmd_entry_t entry_out;
-    dyncall_status_t s = cmd_queue_pop(&queue, &entry_out);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_POOL, s);
+    cmd_queue_status_t s = cmd_queue_pop(&queue, &entry_out);
+    TEST_ASSERT_EQUAL_INT(CMDQUEUE_ERR_FULL, s);
 }
 
 /* ===== flush ===== */
@@ -192,8 +192,8 @@ void test_cmdqueue_func_len_match_cmdscan(void)
         TEST_ASSERT_EQUAL_UINT8(expected_func_len[i], entry.func_len);
 
         cmd_queue_init(&queue);
-        dyncall_status_t s = cmd_queue_push(&queue, &entry);
-        TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
+        cmd_queue_status_t s = cmd_queue_push(&queue, &entry);
+        TEST_ASSERT_EQUAL_INT(CMDQUEUE_OK, s);
 
         /* 验证 check 能匹配 */
         char func_name[32];
@@ -218,8 +218,8 @@ void test_cmdqueue_buf_overflow(void)
         cmd_init(&scanner, (const uint8_t*)big, sizeof(big));
         cmd_entry_t entry;
         cmd_scan(&scanner, &entry);
-        dyncall_status_t s = cmd_queue_push(&queue, &entry);
-        if (s != DYNCALL_NO_ERROR) break;
+        cmd_queue_status_t s = cmd_queue_push(&queue, &entry);
+        if (s != CMDQUEUE_OK) break;
         pushed++;
     }
 
@@ -239,8 +239,8 @@ void test_cmdqueue_push_invalid(void)
 {
     cmd_queue_init(&queue);
 
-    dyncall_status_t s = cmd_queue_push(&queue, NULL);
-    TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_NULL_OBJECT, s);
+    cmd_queue_status_t s = cmd_queue_push(&queue, NULL);
+    TEST_ASSERT_EQUAL_INT(CMDQUEUE_ERR_NULL, s);
 }
 
 /* ===== cmd_parse 保留可用 ===== */

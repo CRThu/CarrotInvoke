@@ -20,8 +20,14 @@ extern "C"
 
 #include <inttypes.h>
 #include "cmdscan.h"
-#include "dyncall.h"
 #include "ringbuf.h"
+
+/* 队列状态码 */
+typedef enum {
+    CMDQUEUE_OK = 0,
+    CMDQUEUE_ERR_NULL,      /* 空指针 */
+    CMDQUEUE_ERR_FULL,      /* 队列满 / 缓冲区不足 */
+} cmd_queue_status_t;
 
 #define CMD_QUEUE_SIZE              128
 #define CMD_QUEUE_BUF_SIZE          2048
@@ -45,17 +51,17 @@ void cmd_queue_init(cmd_queue_t* queue);
  * @brief 命令入队（复制原始命令到 buf）
  * @param queue 队列指针
  * @param entry 命令条目（来自 cmd_scan）
- * @return DYNCALL_NO_ERROR 成功，其他错误码
+ * @return cmd_queue_status_t 成功或其他错误码
  */
-dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_entry_t* entry);
+cmd_queue_status_t cmd_queue_push(cmd_queue_t* queue, cmd_entry_t* entry);
 
 /**
  * @brief 命令出队
  * @param queue 队列指针
  * @param entry 输出：命令条目（buf 指向 queue 内部 buf）
- * @return DYNCALL_NO_ERROR 成功，DYNCALL_ERR_POOL 队列空
+ * @return cmd_queue_status_t 成功，CMDQUEUE_ERR_FULL 队列空
  */
-dyncall_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_entry_t* entry);
+cmd_queue_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_entry_t* entry);
 
 /**
  * @brief 检查队列是否为空

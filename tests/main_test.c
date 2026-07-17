@@ -2,9 +2,6 @@
  * main_test.c — Unity test runner entry point
  *
  * Global setUp/tearDown + runs all test suites.
- *
- * Old modules disabled: DynPool, CmdParse, DynCall, E2E
- * (replaced by typeconv/dispatch/invoke pipeline)
  */
 #include "unity.h"
 #include "test_helpers.h"
@@ -29,14 +26,6 @@ extern int run_e2e_tests(void);
 int main(void)
 {
     int failures = 0;
-
-    /* Old modules disabled — replaced by typeconv/dispatch/invoke pipeline */
-    // printf("\n========== DynPool Tests ==========\n");
-    // failures += run_dynpool_tests();
-    // printf("\n========== CmdParse Tests ==========\n");
-    // failures += run_cmdparse_tests();
-    // printf("\n========== DynCall Tests ==========\n");
-    // failures += run_dyncall_tests();
 
     printf("\n========== E2E Tests ==========\n");
     failures += run_e2e_tests();

@@ -62,7 +62,7 @@ int main(void)
 
     /* 出队执行 */
     cmd_entry_t out;
-    while (cmd_queue_pop(&queue, &out) == DYNCALL_NO_ERROR)
+    while (cmd_queue_pop(&queue, &out) == CMDQUEUE_OK)
     {
         const char* cmd = (const char*)out.buf + out.cmd_start;
 
@@ -117,7 +117,7 @@ int main(void)
 
     printf("[QUEUE] 入队 %d 条命令\r\n", cmd_queue_count(&queue));
 
-    while (cmd_queue_pop(&queue, &out) == DYNCALL_NO_ERROR)
+    while (cmd_queue_pop(&queue, &out) == CMDQUEUE_OK)
     {
         printf("[EXEC] %.*s\r\n", out.cmd_len, out.buf + out.cmd_start);
     }

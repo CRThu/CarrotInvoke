@@ -41,13 +41,14 @@ int main(void) {
 
     while (1) {
         cmd_entry_t entry;
-        if (cmd_queue_pop(&cmd_queue, &entry)) {
-            cmd_args_t result;
-            cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
+        while (!cmd_queue_is_empty(&cmd_queue)) {
+        cmd_queue_pop(&cmd_queue, &entry);
+        cmd_args_t result;
+        cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
 
-            invoke_ret_t ret;
-            invoke_call(&dispatcher, &result, &ret);
-        }
+        invoke_ret_t ret;
+        invoke_call(&dispatcher, &result, &ret);
+    }
     }
 }
 ```
@@ -86,12 +87,13 @@ int main(void) {
 
     while (1) {
         cmd_entry_t entry;
-        if (cmd_queue_pop(&cmd_queue, &entry)) {
-            cmd_args_t result;
-            cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
+        while (!cmd_queue_is_empty(&cmd_queue)) {
+        cmd_queue_pop(&cmd_queue, &entry);
+        cmd_args_t result;
+        cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
 
-            invoke_call(&dispatcher, &result, NULL);
-        }
+        invoke_call(&dispatcher, &result, NULL);
+    }
     }
 }
 ```
@@ -145,12 +147,13 @@ int main(void) {
 
     while (1) {
         cmd_entry_t entry;
-        if (cmd_queue_pop(&cmd_queue, &entry)) {
-            cmd_args_t result;
-            cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
+        while (!cmd_queue_is_empty(&cmd_queue)) {
+        cmd_queue_pop(&cmd_queue, &entry);
+        cmd_args_t result;
+        cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
 
-            invoke_call(&dispatcher, &result, NULL);
-        }
+        invoke_call(&dispatcher, &result, NULL);
+    }
     }
 }
 ```
@@ -251,12 +254,13 @@ int main(void) {
 
     while (1) {
         cmd_entry_t entry;
-        if (cmd_queue_pop(&cmd_queue, &entry)) {
-            cmd_args_t result;
-            cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
+        while (!cmd_queue_is_empty(&cmd_queue)) {
+        cmd_queue_pop(&cmd_queue, &entry);
+        cmd_args_t result;
+        cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
 
-            invoke_call(&dispatcher, &result, NULL);
-        }
+        invoke_call(&dispatcher, &result, NULL);
+    }
     }
 }
 ```
