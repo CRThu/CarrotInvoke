@@ -6,8 +6,12 @@
  * 运行时字符串签名注册
  *
  * 用法：
- *   dispatch_reg(add, "(i, i) -> i");
- *   dispatch_reg(hello, "()");
+ *   static dispatch_registry_t dispatcher;
+ *
+ *   dispatch_init(&dispatcher);
+ *   dispatch_reg(&dispatcher, add, "add(i, i) -> i");
+ *   dispatch_reg(&dispatcher, hello, "hello()");
+ *   dispatch_find(&dispatcher, "add", 3);
  *****************************/
 #pragma once
 #ifndef _DISPATCH_H_
@@ -23,9 +27,9 @@ extern "C"
 /*=============================================================
  * 常量
  *=============================================================*/
-#define DISPATCH_MAX_FUNC_CNT   256
+#define DISPATCH_MAX_FUNC_CNT   64
 #define DISPATCH_ARGS_MAX_CNT   9
-#define DISPATCH_FUNC_NAME_MAX  64
+#define DISPATCH_FUNC_NAME_MAX  32
 
 /*=============================================================
  * 状态码
@@ -53,7 +57,7 @@ typedef enum {
  * 函数信息
  *=============================================================*/
 typedef struct {
-    const char*  name;
+    char         name[DISPATCH_FUNC_NAME_MAX];
     uint16_t     name_len;
     void*        handler;
     uint8_t      ret_type;                   // dispatch_type_t
@@ -62,38 +66,52 @@ typedef struct {
 } dispatch_func_t;
 
 /*=============================================================
+ * 注册表 (编译期固定容量)
+ *=============================================================*/
+typedef struct {
+    dispatch_func_t  funcs[DISPATCH_MAX_FUNC_CNT];
+    uint16_t         count;                 // 当前数量
+} dispatch_registry_t;
+
+/*=============================================================
  * 注册宏
  *=============================================================*/
-#define dispatch_reg(HANDLER, SIG) \
-    _dispatch_add(#HANDLER, (void*)(HANDLER), SIG)
+#define dispatch_reg(REG, HANDLER, SIG) \
+    _dispatch_add(REG, #HANDLER, (void*)(HANDLER), SIG)
 
 /*=============================================================
  * 公开 API
  *=============================================================*/
 
 /**
- * @brief 重置所有注册信息
+ * @brief 初始化注册表
+ *
+ * @param dispatcher  注册表指针
  */
-void dispatch_init(void);
+void dispatch_init(dispatch_registry_t* dispatcher);
 
 /**
  * @brief 注册函数 (内部由宏调用)
  *
- * @param name    函数名 (字符串)
- * @param handler 函数指针
- * @param sig     签名字符串, 如 "(i, i) -> i" 或 "hello()"
+ * @param dispatcher  注册表指针
+ * @param name        函数名 (字符串)
+ * @param handler     函数指针
+ * @param sig         签名字符串, 如 "(i, i) -> i" 或 "hello()"
  * @return dispatch_status_t
  */
-dispatch_status_t _dispatch_add(const char* name, void* handler, const char* sig);
+dispatch_status_t _dispatch_add(dispatch_registry_t* dispatcher,
+                                const char* name, void* handler, const char* sig);
 
 /**
  * @brief 查找函数
  *
- * @param name 函数名指针 (不需要 null-terminate)
- * @param len  函数名长度
+ * @param dispatcher  注册表指针
+ * @param name        函数名指针 (不需要 null-terminate)
+ * @param len         函数名长度
  * @return dispatch_func_t* 找到的函数信息, NULL=未找到
  */
-dispatch_func_t* dispatch_find(const char* name, uint16_t len);
+dispatch_func_t* dispatch_find(dispatch_registry_t* dispatcher,
+                               const char* name, uint16_t len);
 
 #ifdef __cplusplus
 }

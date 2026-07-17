@@ -9,13 +9,6 @@
 #include <string.h>
 
 /*=============================================================
- * 注册表 (扁平数组，不用 group)
- *=============================================================*/
-static dispatch_func_t _funcs[DISPATCH_MAX_FUNC_CNT];
-static char _name_bufs[DISPATCH_MAX_FUNC_CNT][DISPATCH_FUNC_NAME_MAX];
-static uint16_t _func_count = 0;
-
-/*=============================================================
  * 签名解析
  *=============================================================*/
 
@@ -218,22 +211,23 @@ static dispatch_status_t _parse_sig(const char* sig,
  * 公开 API
  *=============================================================*/
 
-void dispatch_init(void)
+void dispatch_init(dispatch_registry_t* dispatcher)
 {
-    _func_count = 0;
-    memset(_funcs, 0, sizeof(_funcs));
-    memset(_name_bufs, 0, sizeof(_name_bufs));
+    if (dispatcher == NULL) return;
+    dispatcher->count = 0;
+    memset(dispatcher->funcs, 0, sizeof(dispatcher->funcs));
 }
 
-dispatch_status_t _dispatch_add(const char* name, void* handler, const char* sig)
+dispatch_status_t _dispatch_add(dispatch_registry_t* dispatcher,
+                                const char* name, void* handler, const char* sig)
 {
-    if (handler == NULL || sig == NULL)
+    if (dispatcher == NULL || handler == NULL || sig == NULL)
         return DISPATCH_ERR_NULL;
 
-    if (_func_count >= DISPATCH_MAX_FUNC_CNT)
+    if (dispatcher->count >= DISPATCH_MAX_FUNC_CNT)
         return DISPATCH_ERR_FULL;
 
-    dispatch_func_t* f = &_funcs[_func_count];
+    dispatch_func_t* f = &dispatcher->funcs[dispatcher->count];
 
     // 解析签名
     uint8_t ret_type = DV;
@@ -245,41 +239,43 @@ dispatch_status_t _dispatch_add(const char* name, void* handler, const char* sig
 
     // 函数名: 优先从签名字符串提取 (如有 '(')
     // 否则用外部传入的 name
+    uint16_t name_len;
     const char* paren = strchr(sig, '(');
     if (paren != NULL && paren > sig)
     {
         // 签名中有函数名部分, 如 "hello()" → "hello"
-        uint16_t name_len = (uint16_t)(paren - sig);
+        name_len = (uint16_t)(paren - sig);
         while (name_len > 0 && sig[name_len - 1] == ' ') name_len--;
         if (name_len >= DISPATCH_FUNC_NAME_MAX) name_len = DISPATCH_FUNC_NAME_MAX - 1;
-        memcpy(_name_bufs[_func_count], sig, name_len);
-        _name_bufs[_func_count][name_len] = '\0';
-        f->name = _name_bufs[_func_count];
-        f->name_len = name_len;
+        memcpy(f->name, sig, name_len);
     }
     else
     {
-        f->name = name;
-        f->name_len = (uint16_t)strlen(name);
+        name_len = (uint16_t)strlen(name);
+        if (name_len >= DISPATCH_FUNC_NAME_MAX) name_len = DISPATCH_FUNC_NAME_MAX - 1;
+        memcpy(f->name, name, name_len);
     }
+    f->name[name_len] = '\0';
+    f->name_len = name_len;
 
     f->handler = handler;
     f->ret_type = ret_type;
     memcpy(f->args_type, args_type, args_count);
     f->args_count = args_count;
 
-    _func_count++;
+    dispatcher->count++;
     return DISPATCH_OK;
 }
 
-dispatch_func_t* dispatch_find(const char* name, uint16_t len)
+dispatch_func_t* dispatch_find(dispatch_registry_t* dispatcher,
+                               const char* name, uint16_t len)
 {
-    if (name == NULL || len == 0) return NULL;
+    if (dispatcher == NULL || name == NULL || len == 0) return NULL;
 
-    for (uint16_t i = 0; i < _func_count; i++)
+    for (uint16_t i = 0; i < dispatcher->count; i++)
     {
-        if (cmd_compare(_funcs[i].name, _funcs[i].name_len, name, len) == 0)
-            return &_funcs[i];
+        if (cmd_compare(dispatcher->funcs[i].name, dispatcher->funcs[i].name_len, name, len) == 0)
+            return &dispatcher->funcs[i];
     }
     return NULL;
 }

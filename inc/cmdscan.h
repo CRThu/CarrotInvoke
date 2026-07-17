@@ -1,11 +1,11 @@
 /****************************
-* CMD SCAN - 零拷贝状态机解析器
+* CMD SCAN - 零拷贝命令解析器
 * CRTHu
 * 2025.07.15
 *
 * 设计目标：
 * 1. 无内存复制 - 直接返回缓冲区指针
-* 2. 状态机按 byte 扫描 - 适配 DMA 增量接收
+* 2. 预解析 + 零拷贝参数切分
 * 3. 无 std 库依赖 - 纯嵌入式友好
 * 4. 预解析函数名长度 - 供 cmd_queue 直接使用
 *****************************/
@@ -20,10 +20,7 @@ extern "C"
 
 #include <inttypes.h>
 
-#define CMD_SCAN_VERSION                "1.0.0"
-
 #define CMD_SCAN_MAX_ARGS               10
-#define CMD_SCAN_MAX_CMD_LEN            256
 
 /* 参数指针结构 - 零拷贝，直接指向原始缓冲区 */
 typedef struct
@@ -32,47 +29,20 @@ typedef struct
     uint16_t len;           /* 参数长度（不含终止符） */
 } cmd_arg_t;
 
-/* 扫描器状态 */
-typedef enum
-{
-    SCAN_IDLE = 0,          /* 空闲状态，等待新命令 */
-    SCAN_func_name,         /* 正在扫描函数名 */
-    SCAN_args,              /* 正在扫描参数 */
-    SCAN_error              /* 格式错误 */
-} cmd_scan_state_t;
-
 /* 扫描结果 */
 typedef enum
 {
     SCAN_INCOMPLETE = 0,    /* 扫描未完成，等待更多数据 */
     SCAN_COMPLETE = 1,      /* 扫描到完整命令（遇到 \n 或 \0） */
-    SCAN_OVERFLOW = -1,     /* 缓冲区溢出 */
     SCAN_ERROR = -2         /* 格式错误 */
 } scan_status_t;
 
 /* 扫描器上下文 - 适配 DMA 增量接收 */
 typedef struct
 {
-    /* 缓冲区信息 */
     const uint8_t* buf;     /* 缓冲区指针 */
     uint16_t buf_size;      /* 缓冲区总大小 */
-
-    /* 扫描位置 */
     uint16_t scan_pos;      /* 当前扫描位置 */
-
-    /* 当前命令信息 */
-    uint16_t cmd_start;     /* 当前命令起始位置 */
-    uint16_t cmd_len;       /* 命令长度（不含 \n） */
-    uint8_t  func_len;      /* 函数名长度（预解析） */
-
-    /* 状态机状态 */
-    cmd_scan_state_t state;
-
-    /* 是否在参数区域内 */
-    uint8_t in_args;
-
-    /* 错误码 */
-    int8_t error;
 } cmd_scanner_t;
 
 /* 预解析结果 - 存储命令在 DMA 缓冲区中的位置信息 */
@@ -141,48 +111,6 @@ void cmdscan_reset(cmd_scanner_t* scanner);
  * @endcode
  */
 scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch);
-
-/**
- * @brief 从指定位置开始扫描，直到遇到 \n 或 \0
- * 
- * 使用方法：
- * 1. 调用 cmdscan_init() 初始化
- * 2. 每次 DMA 接收数据后，调用 cmdscan_scan()
- * 3. 如果返回 SCAN_COMPLETE，说明找到完整命令
- * 4. 调用 cmdparse_args() 解析参数
- * 
- * @param scanner 扫描器上下文
- * @return scan_status_t 扫描结果
- * 
- * 示例：
- * @code
- * cmd_scanner_t scanner;
- * cmdscan_init(&scanner, dma_buf, dma_len);
- * 
- * while (1) {
- *     // 等待 DMA 数据
- *     wait_dma_data();
- *     
- *     scan_status_t status = cmdscan_scan(&scanner);
- *     if (status == SCAN_COMPLETE) {
- *         // 找到完整命令，可以解析
- *         cmd_parse_result_t result;
- *         cmdparse_args(scanner.buf + scanner.cmd_start, 
- *                       scanner.cmd_len, &result);
- *     }
- * }
- * @endcode
- */
-scan_status_t cmdscan_scan(cmd_scanner_t* scanner);
-
-/**
- * @brief 获取下一个命令在缓冲区中的位置
- *
- * @param scanner 扫描器上下文
- * @param next_start 下一个命令的起始位置
- * @return uint16_t 下一个命令的长度，0 表示没有下一个命令
- */
-uint16_t cmdscan_next(const cmd_scanner_t* scanner, uint16_t* next_start);
 
 /**
  * @brief 将完整命令解析为参数指针数组

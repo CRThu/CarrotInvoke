@@ -72,155 +72,145 @@ function_group_t cmd_group =
 void demo_single_command(void)
 {
     printf("=== 单条命令解析示例 ===\r\n");
-    
+
     /* 模拟接收一条完整命令 */
     const char* cmd_str = "cmd_on(1)\r\n";
     reset_dma_buffer();
     simulate_dma_receive((const uint8_t*)cmd_str, strlen(cmd_str));
-    
+
     /* 初始化扫描器 */
     cmd_scanner_t scanner;
     cmdscan_init(&scanner, dma_buffer, dma_write_pos);
-    
-    /* 扫描命令 */
-    scan_status_t status = cmdscan_scan(&scanner);
-    
+
+    /* 预解析命令 */
+    cmd_prefetch_t prefetch;
+    scan_status_t status = cmdscan_prefetch(&scanner, &prefetch);
+
     if (status == SCAN_COMPLETE)
     {
-        printf("[SCAN] 找到完整命令，长度=%d\r\n", scanner.cmd_len);
-        
+        printf("[SCAN] 找到完整命令，长度=%d\r\n", prefetch.cmd_len);
+
         /* 解析参数 */
         cmd_parse_result_t result;
         uint8_t args_count = cmdparse_args(
-            (const char*)(dma_buffer + scanner.cmd_start),
-            scanner.cmd_len,
+            (const char*)(dma_buffer + prefetch.cmd_start),
+            prefetch.cmd_len,
             &result
         );
-        
+
         printf("[PARSE] 函数名: %.*s\r\n", result.func_name_len, result.func_name);
         printf("[PARSE] 参数个数: %d\r\n", args_count);
-        
-        for (uint8_t i = 0; i < args_count; i++)
-        {
-            printf("[PARSE]   arg[%d]: %.*s\r\n", 
-                   i, result.args[i].len, result.args[i].ptr);
-        }
-    }
-    
-    printf("\r\n");
-}
 
-void demo_multi_command(void)
-{
-    printf("=== 多命令解析示例（模拟 DMA 连续接收）===\r\n");
-    
-    /* 模拟接收多条命令 */
-    const char* cmds = "cmd_on(1)\r\ncmd_set_speed(0, 100)\r\ncmd_get_status()\r\n";
-    reset_dma_buffer();
-    simulate_dma_receive((const uint8_t*)cmds, strlen(cmds));
-    
-    /* 初始化扫描器 */
-    cmd_scanner_t scanner;
-    cmdscan_init(&scanner, dma_buffer, dma_write_pos);
-    
-    /* 循环扫描所有命令 */
-    uint8_t cmd_count = 0;
-    scan_status_t status;
-    
-    while ((status = cmdscan_scan(&scanner)) == SCAN_COMPLETE)
-    {
-        cmd_count++;
-        printf("[SCAN] 命令 %d: ", cmd_count);
-        
-        /* 输出命令内容 */
-        for (uint16_t i = 0; i < scanner.cmd_len; i++)
-        {
-            putchar(dma_buffer[scanner.cmd_start + i]);
-        }
-        printf("\r\n");
-        
-        /* 解析参数 */
-        cmd_parse_result_t result;
-        uint8_t args_count = cmdparse_args(
-            (const char*)(dma_buffer + scanner.cmd_start),
-            scanner.cmd_len,
-            &result
-        );
-        
-        printf("[PARSE]   函数: %.*s, 参数: %d\r\n",
-               result.func_name_len, result.func_name, args_count);
-    }
-    
-    printf("[SCAN] 扫描结束，共处理 %d 条命令\r\n\r\n", cmd_count);
-}
-
-void demo_incremental_receive(void)
-{
-    printf("=== 增量接收示例（模拟 DMA 分片接收）===\r\n");
-    
-    /* 模拟分片接收的命令 */
-    const char* part1 = "cmd_set_";
-    const char* part2 = "speed(2,";
-    const char* part3 = " 50)\r\n";
-    
-    reset_dma_buffer();
-    
-    /* 初始化扫描器 */
-    cmd_scanner_t scanner;
-    cmdscan_init(&scanner, dma_buffer, sizeof(dma_buffer));
-    
-    /* 第一次接收 */
-    printf("[DMA] 接收第1片: %s\r\n", part1);
-    simulate_dma_receive((const uint8_t*)part1, strlen(part1));
-    scanner.buf_size = dma_write_pos; /* 更新缓冲区大小 */
-    
-    scan_status_t status = cmdscan_scan(&scanner);
-    printf("[SCAN] 状态: %s\r\n", 
-           status == SCAN_INCOMPLETE ? "未完成" : 
-           status == SCAN_COMPLETE ? "完成" : "错误");
-    
-    /* 第二次接收 */
-    printf("[DMA] 接收第2片: %s\r\n", part2);
-    simulate_dma_receive((const uint8_t*)part2, strlen(part2));
-    scanner.buf_size = dma_write_pos; /* 更新缓冲区大小 */
-    
-    status = cmdscan_scan(&scanner);
-    printf("[SCAN] 状态: %s\r\n",
-           status == SCAN_INCOMPLETE ? "未完成" : 
-           status == SCAN_COMPLETE ? "完成" : "错误");
-    
-    /* 第三次接收 */
-    printf("[DMA] 接收第3片: %s\r\n", part3);
-    simulate_dma_receive((const uint8_t*)part3, strlen(part3));
-    scanner.buf_size = dma_write_pos; /* 更新缓冲区大小 */
-    
-    status = cmdscan_scan(&scanner);
-    printf("[SCAN] 状态: %s\r\n",
-           status == SCAN_INCOMPLETE ? "未完成" : 
-           status == SCAN_COMPLETE ? "完成" : "错误");
-    
-    if (status == SCAN_COMPLETE)
-    {
-        printf("[SCAN] 找到完整命令，长度=%d\r\n", scanner.cmd_len);
-        
-        /* 解析参数 */
-        cmd_parse_result_t result;
-        uint8_t args_count = cmdparse_args(
-            (const char*)(dma_buffer + scanner.cmd_start),
-            scanner.cmd_len,
-            &result
-        );
-        
-        printf("[PARSE] 函数名: %.*s\r\n", result.func_name_len, result.func_name);
-        printf("[PARSE] 参数个数: %d\r\n", args_count);
-        
         for (uint8_t i = 0; i < args_count; i++)
         {
             printf("[PARSE]   arg[%d]: %.*s\r\n",
                    i, result.args[i].len, result.args[i].ptr);
         }
     }
-    
+
+    printf("\r\n");
+}
+
+void demo_multi_command(void)
+{
+    printf("=== 多命令解析示例（模拟 DMA 连续接收）===\r\n");
+
+    /* 模拟接收多条命令 */
+    const char* cmds = "cmd_on(1)\r\ncmd_set_speed(0, 100)\r\ncmd_get_status()\r\n";
+    reset_dma_buffer();
+    simulate_dma_receive((const uint8_t*)cmds, strlen(cmds));
+
+    /* 初始化扫描器 */
+    cmd_scanner_t scanner;
+    cmdscan_init(&scanner, dma_buffer, dma_write_pos);
+
+    /* 循环预解析所有命令 */
+    uint8_t cmd_count = 0;
+    cmd_prefetch_t prefetch;
+
+    while (cmdscan_prefetch(&scanner, &prefetch) == SCAN_COMPLETE)
+    {
+        cmd_count++;
+        printf("[SCAN] 命令 %d: ", cmd_count);
+
+        /* 输出命令内容 */
+        for (uint16_t i = 0; i < prefetch.cmd_len; i++)
+        {
+            putchar(dma_buffer[prefetch.cmd_start + i]);
+        }
+        printf("\r\n");
+
+        /* 解析参数 */
+        cmd_parse_result_t result;
+        uint8_t args_count = cmdparse_args(
+            (const char*)(dma_buffer + prefetch.cmd_start),
+            prefetch.cmd_len,
+            &result
+        );
+
+        printf("[PARSE]   函数: %.*s, 参数: %d\r\n",
+               result.func_name_len, result.func_name, args_count);
+    }
+
+    printf("[SCAN] 扫描结束，共处理 %d 条命令\r\n\r\n", cmd_count);
+}
+
+void demo_incremental_receive(void)
+{
+    printf("=== 增量接收示例（模拟 DMA 分片接收，缓冲后批量解析）===\r\n");
+
+    /* 模拟分片接收的命令 */
+    const char* part1 = "cmd_set_";
+    const char* part2 = "speed(2,";
+    const char* part3 = " 50)\r\n";
+
+    reset_dma_buffer();
+
+    /* 初始化扫描器 */
+    cmd_scanner_t scanner;
+    cmdscan_init(&scanner, dma_buffer, sizeof(dma_buffer));
+
+    /* 第一次接收 */
+    printf("[DMA] 接收第1片: %s\r\n", part1);
+    simulate_dma_receive((const uint8_t*)part1, strlen(part1));
+    scanner.buf_size = dma_write_pos;
+
+    /* 第二次接收 */
+    printf("[DMA] 接收第2片: %s\r\n", part2);
+    simulate_dma_receive((const uint8_t*)part2, strlen(part2));
+    scanner.buf_size = dma_write_pos;
+
+    /* 第三次接收 */
+    printf("[DMA] 接收第3片: %s\r\n", part3);
+    simulate_dma_receive((const uint8_t*)part3, strlen(part3));
+    scanner.buf_size = dma_write_pos;
+
+    /* 缓冲完成后，使用 prefetch 解析 */
+    cmd_prefetch_t prefetch;
+    scan_status_t status = cmdscan_prefetch(&scanner, &prefetch);
+
+    if (status == SCAN_COMPLETE)
+    {
+        printf("[SCAN] 找到完整命令，长度=%d\r\n", prefetch.cmd_len);
+
+        /* 解析参数 */
+        cmd_parse_result_t result;
+        uint8_t args_count = cmdparse_args(
+            (const char*)(dma_buffer + prefetch.cmd_start),
+            prefetch.cmd_len,
+            &result
+        );
+
+        printf("[PARSE] 函数名: %.*s\r\n", result.func_name_len, result.func_name);
+        printf("[PARSE] 参数个数: %d\r\n", args_count);
+
+        for (uint8_t i = 0; i < args_count; i++)
+        {
+            printf("[PARSE]   arg[%d]: %.*s\r\n",
+                   i, result.args[i].len, result.args[i].ptr);
+        }
+    }
+
     printf("\r\n");
 }
 

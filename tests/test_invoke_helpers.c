@@ -15,6 +15,9 @@
 /* ---- Capture variables ---- */
 invoke_captured_t invoke_captured;
 
+/* ---- Shared registry ---- */
+dispatch_registry_t invoke_dispatcher;
+
 /* ---- fff definitions (void* params) ---- */
 DEFINE_FAKE_VOID_FUNC(invoke_mock_hello);
 DEFINE_FAKE_VALUE_FUNC(int64_t, invoke_mock_add, void*, void*);
@@ -83,20 +86,20 @@ static void capture_args(void* a0, void* a1, void* a2)
     }
 }
 
-/* ---- 注册 mock 函数 (新 dispatch API) ---- */
+/* ---- 注册 mock 函数 ---- */
 static void _register_invoke_mock_funcs(void)
 {
-    dispatch_reg(invoke_mock_hello,  "hello()");
-    dispatch_reg(invoke_mock_dec,    "dec(i)");
-    dispatch_reg(invoke_mock_hex,    "hex(u)");
-    dispatch_reg(invoke_mock_string, "str(s)");
-    dispatch_reg(invoke_mock_add,    "add(i, i) -> i");
-    dispatch_reg(invoke_mock_args,   "args(s, s, s)");
+    dispatch_reg(&invoke_dispatcher, invoke_mock_hello,  "hello()");
+    dispatch_reg(&invoke_dispatcher, invoke_mock_dec,    "dec(i)");
+    dispatch_reg(&invoke_dispatcher, invoke_mock_hex,    "hex(u)");
+    dispatch_reg(&invoke_dispatcher, invoke_mock_string, "str(s)");
+    dispatch_reg(&invoke_dispatcher, invoke_mock_add,    "add(i, i) -> i");
+    dispatch_reg(&invoke_dispatcher, invoke_mock_args,   "args(s, s, s)");
 }
 
 void invoke_test_helpers_reset(void)
 {
-    dispatch_init();
+    dispatch_init(&invoke_dispatcher);
     _register_invoke_mock_funcs();
     memset(&invoke_captured, 0, sizeof(invoke_captured));
     RESET_FAKE(invoke_mock_hello);

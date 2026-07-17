@@ -64,7 +64,8 @@ static invoke_ret_type_t resolve_ret_type(uint8_t ret_type)
 /*=============================================================
  * 公开 API
  *=============================================================*/
-dispatch_status_t invoke_call(cmd_parse_result_t* result, invoke_ret_t* ret)
+dispatch_status_t invoke_call(dispatch_registry_t* reg,
+                              cmd_parse_result_t* result, invoke_ret_t* ret)
 {
     if (result == NULL || result->func_name == NULL || result->func_name_len == 0)
     {
@@ -73,7 +74,7 @@ dispatch_status_t invoke_call(cmd_parse_result_t* result, invoke_ret_t* ret)
     }
 
     /* 1. 查找函数 */
-    dispatch_func_t* f = dispatch_find(result->func_name, result->func_name_len);
+    dispatch_func_t* f = dispatch_find(reg, result->func_name, result->func_name_len);
     if (f == NULL)
     {
         printf("[ERROR]: Function not found.\r\n");

@@ -33,7 +33,10 @@ typedef struct {
 
 extern invoke_captured_t invoke_captured;
 
-/* ---- Reset all invoke mocks + capture ---- */
+/* ---- Shared dispatch registry for invoke tests ---- */
+extern dispatch_registry_t invoke_dispatcher;
+
+/* ---- Reset all invoke mocks + registry + capture ---- */
 void invoke_test_helpers_reset(void);
 
 #endif /* TEST_INVOKE_HELPERS_H */

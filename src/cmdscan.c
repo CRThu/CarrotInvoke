@@ -1,5 +1,5 @@
 /****************************
-* CMD SCAN - 零拷贝状态机解析器
+* CMD SCAN - 零拷贝命令解析器
 * CRTHu
 * 2025.07.15
 *****************************/
@@ -60,12 +60,6 @@ void cmdscan_init(cmd_scanner_t* scanner, const uint8_t* buf, uint16_t buf_size)
     scanner->buf = buf;
     scanner->buf_size = buf_size;
     scanner->scan_pos = 0;
-    scanner->cmd_start = 0;
-    scanner->cmd_len = 0;
-    scanner->func_len = 0;
-    scanner->state = SCAN_IDLE;
-    scanner->in_args = 0;
-    scanner->error = 0;
 }
 
 void cmdscan_reset(cmd_scanner_t* scanner)
@@ -73,123 +67,6 @@ void cmdscan_reset(cmd_scanner_t* scanner)
     if (scanner == NULL) return;
 
     scanner->scan_pos = 0;
-    scanner->cmd_start = 0;
-    scanner->cmd_len = 0;
-    scanner->func_len = 0;
-    scanner->state = SCAN_IDLE;
-    scanner->in_args = 0;
-    scanner->error = 0;
-}
-
-scan_status_t cmdscan_scan(cmd_scanner_t* scanner)
-{
-    if (scanner == NULL || scanner->buf == NULL)
-        return SCAN_ERROR;
-
-    /* 从当前扫描位置继续 */
-    while (scanner->scan_pos < scanner->buf_size)
-    {
-        char c = (char)scanner->buf[scanner->scan_pos];
-
-        switch (scanner->state)
-        {
-        case SCAN_IDLE:
-            /* 跳过前导空白 */
-            if (is_space(c))
-            {
-                scanner->scan_pos++;
-                break;
-            }
-
-            /* 遇到终止符，忽略空行 */
-            if (is_terminator(c))
-            {
-                scanner->scan_pos++;
-                break;
-            }
-
-            /* 遇到非空白字符，开始扫描命令 */
-            scanner->cmd_start = scanner->scan_pos;
-            scanner->cmd_len = 0;
-            scanner->func_len = 0;
-            scanner->in_args = 0;
-            scanner->state = SCAN_func_name;
-            break;
-
-        case SCAN_func_name:
-            /* 扫描函数名，直到遇到左括号或空白 */
-            if (is_left_bracket(c))
-            {
-                scanner->in_args = 1;
-                scanner->state = SCAN_args;
-                scanner->scan_pos++;
-            }
-            else if (is_space(c))
-            {
-                /* 函数名后的空白，继续扫描直到遇到左括号 */
-                scanner->scan_pos++;
-            }
-            else if (is_terminator(c))
-            {
-                /* 无参函数，直接结束 */
-                scanner->cmd_len = scanner->scan_pos - scanner->cmd_start;
-                scanner->scan_pos++; /* 跳过 \n */
-                scanner->state = SCAN_IDLE;
-                return SCAN_COMPLETE;
-            }
-            else
-            {
-                /* 普通字符，属于函数名 */
-                scanner->scan_pos++;
-            }
-            break;
-
-        case SCAN_args:
-            /* 扫描参数区域 */
-            if (is_terminator(c))
-            {
-                /* 命令结束 */
-                scanner->cmd_len = scanner->scan_pos - scanner->cmd_start;
-                scanner->scan_pos++; /* 跳过 \n */
-
-                /* 检查括号是否匹配 */
-                if (scanner->in_args)
-                {
-                    scanner->error = -1; /* 括号不匹配 */
-                    scanner->state = SCAN_error;
-                    return SCAN_ERROR;
-                }
-
-                scanner->state = SCAN_IDLE;
-                return SCAN_COMPLETE;
-            }
-            else if (is_right_bracket(c))
-            {
-                scanner->in_args = 0;
-                scanner->scan_pos++;
-            }
-            else
-            {
-                /* 普通字符 */
-                scanner->scan_pos++;
-            }
-            break;
-
-        case SCAN_error:
-            /* 错误状态，跳过剩余字符直到终止符 */
-            if (is_terminator(c))
-            {
-                scanner->scan_pos++;
-                scanner->state = SCAN_IDLE;
-                return SCAN_ERROR;
-            }
-            scanner->scan_pos++;
-            break;
-        }
-    }
-
-    /* 缓冲区扫描完毕，未找到完整命令 */
-    return SCAN_INCOMPLETE;
 }
 
 scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
@@ -305,24 +182,8 @@ scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
     return SCAN_COMPLETE;
 }
 
-uint16_t cmdscan_next(const cmd_scanner_t* scanner, uint16_t* next_start)
-{
-    if (scanner == NULL || next_start == NULL)
-        return 0;
-
-    /* 当前命令结束位置就是下一个命令的起始 */
-    *next_start = scanner->scan_pos;
-
-    /* 检查是否还有剩余数据 */
-    if (*next_start >= scanner->buf_size)
-        return 0;
-
-    /* 计算剩余长度 */
-    return scanner->buf_size - *next_start;
-}
-
 /*=============================================================
- * 参数解析 API（零拷贝）- 保留供执行时使用
+ * 参数解析 API（零拷贝）
  *=============================================================*/
 
 /**

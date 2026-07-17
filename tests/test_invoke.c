@@ -43,7 +43,7 @@ static dispatch_status_t run_pipeline(const char* buf, uint16_t len)
         cmd_parse_result_t result;
         cmdparse_args((const char*)pf.buf + pf.cmd_start, pf.cmd_len, &result);
 
-        last_status = invoke_call(&result, NULL);
+        last_status = invoke_call(&invoke_dispatcher, &result, NULL);
     }
 
     return last_status;
@@ -56,7 +56,7 @@ static dispatch_status_t run_pipeline(const char* buf, uint16_t len)
 void test_icall_null_result(void)
 {
     invoke_setUp();
-    dispatch_status_t s = invoke_call(NULL, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, NULL, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NULL, s);
 }
 
@@ -65,7 +65,7 @@ void test_icall_null_func_name(void)
     invoke_setUp();
     cmd_parse_result_t result;
     memset(&result, 0, sizeof(result));
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NULL, s);
 }
 
@@ -76,7 +76,7 @@ void test_icall_func_not_found(void)
     memset(&result, 0, sizeof(result));
     result.func_name = "nonexistent";
     result.func_name_len = strlen("nonexistent");
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NOT_FOUND, s);
 }
 
@@ -93,7 +93,7 @@ void test_icall_hello(void)
     result.func_name_len = 5;
     result.args_count = 0;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_hello_fake.call_count);
 }
@@ -113,7 +113,7 @@ void test_icall_dec_positive(void)
     result.args[0].len = 2;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_dec_fake.call_count);
 
@@ -133,7 +133,7 @@ void test_icall_dec_negative(void)
     result.args[0].len = 4;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     int64_t val = *(int64_t*)invoke_mock_dec_fake.arg0_val;
     TEST_ASSERT_EQUAL_INT64(-100, val);
@@ -150,7 +150,7 @@ void test_icall_dec_zero(void)
     result.args[0].len = 1;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     int64_t val = *(int64_t*)invoke_mock_dec_fake.arg0_val;
     TEST_ASSERT_EQUAL_INT64(0, val);
@@ -171,7 +171,7 @@ void test_icall_hex_basic(void)
     result.args[0].len = 2;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     uint64_t val = *(uint64_t*)invoke_mock_hex_fake.arg0_val;
     TEST_ASSERT_EQUAL_HEX64(0xFF, val);
@@ -188,7 +188,7 @@ void test_icall_hex_with_prefix(void)
     result.args[0].len = 6;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     uint64_t val = *(uint64_t*)invoke_mock_hex_fake.arg0_val;
     TEST_ASSERT_EQUAL_HEX64(0xDEAD, val);
@@ -209,7 +209,7 @@ void test_icall_string_basic(void)
     result.args[0].len = 5;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
 
     /* p[i] points to null-terminated str_buf — single dereference */
@@ -235,7 +235,7 @@ void test_icall_add(void)
     result.args_count = 2;
 
     invoke_ret_t ret;
-    dispatch_status_t s = invoke_call(&result, &ret);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, &ret);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_add_fake.call_count);
 
@@ -264,7 +264,7 @@ void test_icall_3strings(void)
     result.args[2].len = 5;
     result.args_count = 3;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(1, invoke_mock_args_fake.call_count);
 
@@ -291,7 +291,7 @@ void test_icall_arg_mismatch_too_many(void)
     result.args[0].len = 5;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_SIG, s);
     TEST_ASSERT_EQUAL_INT(0, invoke_mock_hello_fake.call_count);
 }
@@ -307,7 +307,7 @@ void test_icall_arg_mismatch_too_few(void)
     result.args[0].len = 2;
     result.args_count = 1;
 
-    dispatch_status_t s = invoke_call(&result, NULL);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_SIG, s);
     TEST_ASSERT_EQUAL_INT(0, invoke_mock_add_fake.call_count);
 }
@@ -327,7 +327,7 @@ void test_icall_ret_none(void)
 
     invoke_ret_t ret;
     ret.type = INVOKERET_STR;  /* sentinel */
-    dispatch_status_t s = invoke_call(&result, &ret);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, &ret);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(INVOKERET_NONE, ret.type);
 }
@@ -346,7 +346,7 @@ void test_icall_ret_i64(void)
     result.args_count = 2;
 
     invoke_ret_t ret;
-    dispatch_status_t s = invoke_call(&result, &ret);
+    dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, &ret);
     TEST_ASSERT_EQUAL_INT(DISPATCH_OK, s);
     TEST_ASSERT_EQUAL_INT(INVOKERET_I64, ret.type);
     /* mock_add returns 0 by default (fff init), but ret type is correct */

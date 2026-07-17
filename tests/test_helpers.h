@@ -12,6 +12,9 @@ DECLARE_FAKE_VOID_FUNC(print_hex_mock, void*);
 DECLARE_FAKE_VOID_FUNC(print_string_mock, void*);
 DECLARE_FAKE_VOID_FUNC(print_args_mock, void*, void*, void*);
 
+/* ---- Shared dispatch registry for general tests ---- */
+extern dispatch_registry_t helpers_dispatcher;
+
 /* ---- Reset all fff fakes and dispatch registrations ---- */
 void test_helpers_reset(void);
 
