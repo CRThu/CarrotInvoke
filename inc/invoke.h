@@ -95,12 +95,12 @@ typedef char* (*invoke_delegate_a9rs)(void* arg1, void* arg2, void* arg3, void* 
  * @brief 通过零拷贝解析结果调用函数
  *
  * @param reg     注册表指针
- * @param result  零拷贝解析结果
+ * @param result  零拷贝解析结果（cmd_args_t）
  * @param ret     可选的返回值输出 (NULL = 忽略返回值)
  * @return dispatch_status_t 调用状态
  */
 dispatch_status_t invoke_call(dispatch_registry_t* reg,
-                              cmd_parse_result_t* result, invoke_ret_t* ret);
+                              cmd_args_t* result, invoke_ret_t* ret);
 
 #ifdef __cplusplus
 }

@@ -23,23 +23,23 @@ void test_cmdqueue_push_pop_simple(void)
     cmd_queue_init(&queue);
 
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, (const uint8_t*)"print(1,2)", 10);
+    cmd_init(&scanner, (const uint8_t*)"print(1,2)", 10);
 
-    cmd_prefetch_t pf;
-    cmdscan_prefetch(&scanner, &pf);
+    cmd_entry_t entry;
+    cmd_scan(&scanner, &entry);
 
-    dyncall_status_t s = cmd_queue_push(&queue, &pf);
+    dyncall_status_t s = cmd_queue_push(&queue, &entry);
     TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
     TEST_ASSERT_FALSE(cmd_queue_is_empty(&queue));
     TEST_ASSERT_EQUAL_UINT8(1, cmd_queue_count(&queue));
 
-    cmd_prefetch_t pf_out;
-    s = cmd_queue_pop(&queue, &pf_out);
+    cmd_entry_t entry_out;
+    s = cmd_queue_pop(&queue, &entry_out);
     TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
-    TEST_ASSERT_EQUAL_UINT16(10, pf_out.cmd_len);
-    TEST_ASSERT_EQUAL_UINT8(5, pf_out.func_len);
+    TEST_ASSERT_EQUAL_UINT16(10, entry_out.cmd_len);
+    TEST_ASSERT_EQUAL_UINT8(5, entry_out.func_len);
 
-    const char* cmd = pf_out.buf + pf_out.cmd_start;
+    const char* cmd = entry_out.buf + entry_out.cmd_start;
     TEST_ASSERT_EQUAL_MEMORY("print(1,2)", cmd, 10);
 
     TEST_ASSERT_TRUE(cmd_queue_is_empty(&queue));
@@ -50,25 +50,25 @@ void test_cmdqueue_push_pop_fifo(void)
     cmd_queue_init(&queue);
 
     cmd_scanner_t scanner;
-    cmd_prefetch_t pf1, pf2;
+    cmd_entry_t entry1, entry2;
 
     /* cmd_a\n cmd_b - 两条命令，每条 5 字符 + \n */
-    cmdscan_init(&scanner, (const uint8_t*)"cmd_a\ncmd_b", 11);
-    cmdscan_prefetch(&scanner, &pf1);
-    cmdscan_prefetch(&scanner, &pf2);
+    cmd_init(&scanner, (const uint8_t*)"cmd_a\ncmd_b", 11);
+    cmd_scan(&scanner, &entry1);
+    cmd_scan(&scanner, &entry2);
 
-    cmd_queue_push(&queue, &pf1);
-    cmd_queue_push(&queue, &pf2);
+    cmd_queue_push(&queue, &entry1);
+    cmd_queue_push(&queue, &entry2);
 
     TEST_ASSERT_EQUAL_UINT8(2, cmd_queue_count(&queue));
 
-    cmd_prefetch_t pf_out;
-    cmd_queue_pop(&queue, &pf_out);
-    const char* cmd = pf_out.buf + pf_out.cmd_start;
+    cmd_entry_t entry_out;
+    cmd_queue_pop(&queue, &entry_out);
+    const char* cmd = entry_out.buf + entry_out.cmd_start;
     TEST_ASSERT_EQUAL_MEMORY("cmd_a", cmd, 5);
 
-    cmd_queue_pop(&queue, &pf_out);
-    cmd = pf_out.buf + pf_out.cmd_start;
+    cmd_queue_pop(&queue, &entry_out);
+    cmd = entry_out.buf + entry_out.cmd_start;
     TEST_ASSERT_EQUAL_MEMORY("cmd_b", cmd, 5);
 
     TEST_ASSERT_TRUE(cmd_queue_is_empty(&queue));
@@ -80,20 +80,20 @@ void test_cmdqueue_push_full(void)
     cmd_queue_init(&queue);
 
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, (const uint8_t*)"x", 1);
+    cmd_init(&scanner, (const uint8_t*)"x", 1);
 
-    cmd_prefetch_t pf;
-    cmdscan_prefetch(&scanner, &pf);
+    cmd_entry_t entry;
+    cmd_scan(&scanner, &entry);
 
     for (uint8_t i = 0; i < CMD_QUEUE_SIZE; i++)
     {
-        dyncall_status_t s = cmd_queue_push(&queue, &pf);
+        dyncall_status_t s = cmd_queue_push(&queue, &entry);
         TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
     }
 
     TEST_ASSERT_TRUE(cmd_queue_is_full(&queue));
 
-    dyncall_status_t s = cmd_queue_push(&queue, &pf);
+    dyncall_status_t s = cmd_queue_push(&queue, &entry);
     TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_POOL, s);
 }
 
@@ -102,8 +102,8 @@ void test_cmdqueue_pop_empty(void)
 {
     cmd_queue_init(&queue);
 
-    cmd_prefetch_t pf_out;
-    dyncall_status_t s = cmd_queue_pop(&queue, &pf_out);
+    cmd_entry_t entry_out;
+    dyncall_status_t s = cmd_queue_pop(&queue, &entry_out);
     TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_POOL, s);
 }
 
@@ -113,12 +113,12 @@ void test_cmdqueue_flush(void)
     cmd_queue_init(&queue);
 
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, (const uint8_t*)"test", 4);
+    cmd_init(&scanner, (const uint8_t*)"test", 4);
 
-    cmd_prefetch_t pf;
-    cmdscan_prefetch(&scanner, &pf);
-    cmd_queue_push(&queue, &pf);
-    cmd_queue_push(&queue, &pf);
+    cmd_entry_t entry;
+    cmd_scan(&scanner, &entry);
+    cmd_queue_push(&queue, &entry);
+    cmd_queue_push(&queue, &entry);
 
     TEST_ASSERT_EQUAL_UINT8(2, cmd_queue_count(&queue));
 
@@ -134,14 +134,14 @@ void test_cmdqueue_check_found(void)
     cmd_queue_init(&queue);
 
     cmd_scanner_t scanner;
-    cmd_prefetch_t pf1, pf2;
+    cmd_entry_t entry1, entry2;
 
-    cmdscan_init(&scanner, (const uint8_t*)"start\nstop", 10);
-    cmdscan_prefetch(&scanner, &pf1);
-    cmdscan_prefetch(&scanner, &pf2);
+    cmd_init(&scanner, (const uint8_t*)"start\nstop", 10);
+    cmd_scan(&scanner, &entry1);
+    cmd_scan(&scanner, &entry2);
 
-    cmd_queue_push(&queue, &pf1);
-    cmd_queue_push(&queue, &pf2);
+    cmd_queue_push(&queue, &entry1);
+    cmd_queue_push(&queue, &entry2);
 
     TEST_ASSERT_EQUAL_UINT8(1, cmd_queue_check(&queue, "stop"));
     TEST_ASSERT_EQUAL_UINT8(1, cmd_queue_check(&queue, "start"));
@@ -159,11 +159,11 @@ void test_cmdqueue_check_partial_name(void)
     cmd_queue_init(&queue);
 
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, (const uint8_t*)"stop_all", 8);
+    cmd_init(&scanner, (const uint8_t*)"stop_all", 8);
 
-    cmd_prefetch_t pf;
-    cmdscan_prefetch(&scanner, &pf);
-    cmd_queue_push(&queue, &pf);
+    cmd_entry_t entry;
+    cmd_scan(&scanner, &entry);
+    cmd_queue_push(&queue, &entry);
 
     TEST_ASSERT_EQUAL_UINT8(0, cmd_queue_check(&queue, "stop"));
     TEST_ASSERT_EQUAL_UINT8(1, cmd_queue_check(&queue, "stop_all"));
@@ -184,21 +184,21 @@ void test_cmdqueue_func_len_match_cmdscan(void)
     for (int i = 0; i < 5; i++)
     {
         cmd_scanner_t scanner;
-        cmdscan_init(&scanner, (const uint8_t*)test_cmds[i], strlen(test_cmds[i]));
+        cmd_init(&scanner, (const uint8_t*)test_cmds[i], strlen(test_cmds[i]));
 
-        cmd_prefetch_t pf;
-        scan_status_t status = cmdscan_prefetch(&scanner, &pf);
-        TEST_ASSERT_EQUAL_INT(SCAN_COMPLETE, status);
-        TEST_ASSERT_EQUAL_UINT8(expected_func_len[i], pf.func_len);
+        cmd_entry_t entry;
+        cmd_status_t status = cmd_scan(&scanner, &entry);
+        TEST_ASSERT_EQUAL_INT(CMD_COMPLETE, status);
+        TEST_ASSERT_EQUAL_UINT8(expected_func_len[i], entry.func_len);
 
         cmd_queue_init(&queue);
-        dyncall_status_t s = cmd_queue_push(&queue, &pf);
+        dyncall_status_t s = cmd_queue_push(&queue, &entry);
         TEST_ASSERT_EQUAL_INT(DYNCALL_NO_ERROR, s);
 
         /* 验证 check 能匹配 */
         char func_name[32];
-        memcpy(func_name, test_cmds[i], pf.func_len);
-        func_name[pf.func_len] = '\0';
+        memcpy(func_name, test_cmds[i], entry.func_len);
+        func_name[entry.func_len] = '\0';
         TEST_ASSERT_EQUAL_UINT8(1, cmd_queue_check(&queue, func_name));
     }
 }
@@ -215,21 +215,21 @@ void test_cmdqueue_buf_overflow(void)
     uint8_t pushed = 0;
     for (uint8_t i = 0; i < CMD_QUEUE_SIZE; i++)
     {
-        cmdscan_init(&scanner, (const uint8_t*)big, sizeof(big));
-        cmd_prefetch_t pf;
-        cmdscan_prefetch(&scanner, &pf);
-        dyncall_status_t s = cmd_queue_push(&queue, &pf);
+        cmd_init(&scanner, (const uint8_t*)big, sizeof(big));
+        cmd_entry_t entry;
+        cmd_scan(&scanner, &entry);
+        dyncall_status_t s = cmd_queue_push(&queue, &entry);
         if (s != DYNCALL_NO_ERROR) break;
         pushed++;
     }
 
     TEST_ASSERT_TRUE(pushed < CMD_QUEUE_SIZE);
 
-    cmd_prefetch_t pf_out;
+    cmd_entry_t entry_out;
     for (uint8_t i = 0; i < pushed; i++)
     {
-        cmd_queue_pop(&queue, &pf_out);
-        const char* cmd = pf_out.buf + pf_out.cmd_start;
+        cmd_queue_pop(&queue, &entry_out);
+        const char* cmd = entry_out.buf + entry_out.cmd_start;
         TEST_ASSERT_EQUAL_MEMORY(big, cmd, sizeof(big));
     }
 }
@@ -243,12 +243,12 @@ void test_cmdqueue_push_invalid(void)
     TEST_ASSERT_EQUAL_INT(DYNCALL_ERR_NULL_OBJECT, s);
 }
 
-/* ===== cmdparse_args 保留可用 ===== */
-void test_cmdparse_args_still_works(void)
+/* ===== cmd_parse 保留可用 ===== */
+void test_cmd_parse_still_works(void)
 {
     char cmd[] = "print(1,2)";
-    cmd_parse_result_t result;
-    uint8_t count = cmdparse_args(cmd, strlen(cmd), &result);
+    cmd_args_t result;
+    uint8_t count = cmd_parse(cmd, strlen(cmd), &result);
 
     TEST_ASSERT_EQUAL_UINT8(2, count);
     TEST_ASSERT_EQUAL_UINT8(5, result.func_name_len);
@@ -274,7 +274,7 @@ int run_cmdqueue_tests(void)
     RUN_TEST(test_cmdqueue_func_len_match_cmdscan);
     RUN_TEST(test_cmdqueue_buf_overflow);
     RUN_TEST(test_cmdqueue_push_invalid);
-    RUN_TEST(test_cmdparse_args_still_works);
+    RUN_TEST(test_cmd_parse_still_works);
 
     return UnityEnd();
 }

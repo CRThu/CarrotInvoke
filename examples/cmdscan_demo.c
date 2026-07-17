@@ -1,6 +1,6 @@
 /****************************
-* CMD SCAN 示例 - 模拟 DMA 场景
-* 演示如何使用状态机解析器
+* CMD 示例 - 模拟 DMA 场景
+* 演示如何使用命令解析器
 *****************************/
 #include "cmdscan.h"
 #include "dyncall.h"
@@ -66,7 +66,7 @@ function_group_t cmd_group =
 };
 
 /*=============================================================
- * 主程序 - 演示状态机解析流程
+ * 主程序 - 演示命令解析流程
  *=============================================================*/
 
 void demo_single_command(void)
@@ -80,21 +80,21 @@ void demo_single_command(void)
 
     /* 初始化扫描器 */
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, dma_buffer, dma_write_pos);
+    cmd_init(&scanner, dma_buffer, dma_write_pos);
 
-    /* 预解析命令 */
-    cmd_prefetch_t prefetch;
-    scan_status_t status = cmdscan_prefetch(&scanner, &prefetch);
+    /* 扫描提取命令 */
+    cmd_entry_t entry;
+    cmd_status_t status = cmd_scan(&scanner, &entry);
 
-    if (status == SCAN_COMPLETE)
+    if (status == CMD_COMPLETE)
     {
-        printf("[SCAN] 找到完整命令，长度=%d\r\n", prefetch.cmd_len);
+        printf("[SCAN] 找到完整命令，长度=%d\r\n", entry.cmd_len);
 
         /* 解析参数 */
-        cmd_parse_result_t result;
-        uint8_t args_count = cmdparse_args(
-            (const char*)(dma_buffer + prefetch.cmd_start),
-            prefetch.cmd_len,
+        cmd_args_t result;
+        uint8_t args_count = cmd_parse(
+            (const char*)(dma_buffer + entry.cmd_start),
+            entry.cmd_len,
             &result
         );
 
@@ -122,29 +122,29 @@ void demo_multi_command(void)
 
     /* 初始化扫描器 */
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, dma_buffer, dma_write_pos);
+    cmd_init(&scanner, dma_buffer, dma_write_pos);
 
-    /* 循环预解析所有命令 */
+    /* 循环扫描提取所有命令 */
     uint8_t cmd_count = 0;
-    cmd_prefetch_t prefetch;
+    cmd_entry_t entry;
 
-    while (cmdscan_prefetch(&scanner, &prefetch) == SCAN_COMPLETE)
+    while (cmd_scan(&scanner, &entry) == CMD_COMPLETE)
     {
         cmd_count++;
         printf("[SCAN] 命令 %d: ", cmd_count);
 
         /* 输出命令内容 */
-        for (uint16_t i = 0; i < prefetch.cmd_len; i++)
+        for (uint16_t i = 0; i < entry.cmd_len; i++)
         {
-            putchar(dma_buffer[prefetch.cmd_start + i]);
+            putchar(dma_buffer[entry.cmd_start + i]);
         }
         printf("\r\n");
 
         /* 解析参数 */
-        cmd_parse_result_t result;
-        uint8_t args_count = cmdparse_args(
-            (const char*)(dma_buffer + prefetch.cmd_start),
-            prefetch.cmd_len,
+        cmd_args_t result;
+        uint8_t args_count = cmd_parse(
+            (const char*)(dma_buffer + entry.cmd_start),
+            entry.cmd_len,
             &result
         );
 
@@ -168,7 +168,7 @@ void demo_incremental_receive(void)
 
     /* 初始化扫描器 */
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, dma_buffer, sizeof(dma_buffer));
+    cmd_init(&scanner, dma_buffer, sizeof(dma_buffer));
 
     /* 第一次接收 */
     printf("[DMA] 接收第1片: %s\r\n", part1);
@@ -185,19 +185,19 @@ void demo_incremental_receive(void)
     simulate_dma_receive((const uint8_t*)part3, strlen(part3));
     scanner.buf_size = dma_write_pos;
 
-    /* 缓冲完成后，使用 prefetch 解析 */
-    cmd_prefetch_t prefetch;
-    scan_status_t status = cmdscan_prefetch(&scanner, &prefetch);
+    /* 缓冲完成后，使用 entry 解析 */
+    cmd_entry_t entry;
+    cmd_status_t status = cmd_scan(&scanner, &entry);
 
-    if (status == SCAN_COMPLETE)
+    if (status == CMD_COMPLETE)
     {
-        printf("[SCAN] 找到完整命令，长度=%d\r\n", prefetch.cmd_len);
+        printf("[SCAN] 找到完整命令，长度=%d\r\n", entry.cmd_len);
 
         /* 解析参数 */
-        cmd_parse_result_t result;
-        uint8_t args_count = cmdparse_args(
-            (const char*)(dma_buffer + prefetch.cmd_start),
-            prefetch.cmd_len,
+        cmd_args_t result;
+        uint8_t args_count = cmd_parse(
+            (const char*)(dma_buffer + entry.cmd_start),
+            entry.cmd_len,
             &result
         );
 
@@ -223,8 +223,8 @@ void demo_zero_copy(void)
     uint16_t cmd_len = sizeof(cmd_buf) - 1; /* 不含 \0 */
     
     /* 解析参数 */
-    cmd_parse_result_t result;
-    uint8_t args_count = cmdparse_args(cmd_buf, cmd_len, &result);
+    cmd_args_t result;
+    uint8_t args_count = cmd_parse(cmd_buf, cmd_len, &result);
     
     printf("[VERIFY] 原始缓冲区地址: %p\r\n", (void*)cmd_buf);
     printf("[VERIFY] 函数名指针: %p\r\n", (void*)result.func_name);
@@ -259,8 +259,8 @@ void demo_format_comparison(void)
     
     /* 测试有括号形式 */
     char cmd1[] = "print(123)";
-    cmd_parse_result_t result1;
-    uint8_t args1 = cmdparse_args(cmd1, strlen(cmd1), &result1);
+    cmd_args_t result1;
+    uint8_t args1 = cmd_parse(cmd1, strlen(cmd1), &result1);
     printf("[FORMAT] print(123): 函数=%.*s, 参数=%d\r\n", 
            result1.func_name_len, result1.func_name, args1);
     if (args1 > 0) {
@@ -269,8 +269,8 @@ void demo_format_comparison(void)
     
     /* 测试无括号形式 */
     char cmd2[] = "print 456";
-    cmd_parse_result_t result2;
-    uint8_t args2 = cmdparse_args(cmd2, strlen(cmd2), &result2);
+    cmd_args_t result2;
+    uint8_t args2 = cmd_parse(cmd2, strlen(cmd2), &result2);
     printf("[FORMAT] print 456: 函数=%.*s, 参数=%d\r\n",
            result2.func_name_len, result2.func_name, args2);
     if (args2 > 0) {
@@ -279,8 +279,8 @@ void demo_format_comparison(void)
     
     /* 测试多参数无括号形式 */
     char cmd3[] = "set 100 200 300";
-    cmd_parse_result_t result3;
-    uint8_t args3 = cmdparse_args(cmd3, strlen(cmd3), &result3);
+    cmd_args_t result3;
+    uint8_t args3 = cmd_parse(cmd3, strlen(cmd3), &result3);
     printf("[FORMAT] set 100 200 300: 函数=%.*s, 参数=%d\r\n",
            result3.func_name_len, result3.func_name, args3);
     for (uint8_t i = 0; i < args3; i++) {
@@ -290,38 +290,38 @@ void demo_format_comparison(void)
     printf("\r\n");
 }
 
-void demo_prefetch(void)
+void demo_entry(void)
 {
-    printf("=== 预解析示例（cmdscan_prefetch）===\r\n");
+    printf("=== 扫描提取示例（cmd_scan）===\r\n");
 
     /* 模拟包含多条命令的缓冲区 */
     const char* buf = "led_on(1)\nstop\nprint 1 2\n";
     uint16_t buf_len = strlen(buf);
 
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, (const uint8_t*)buf, buf_len);
+    cmd_init(&scanner, (const uint8_t*)buf, buf_len);
 
     uint8_t cmd_count = 0;
-    cmd_prefetch_t prefetch;
+    cmd_entry_t entry;
 
-    while (cmdscan_prefetch(&scanner, &prefetch) == SCAN_COMPLETE)
+    while (cmd_scan(&scanner, &entry) == CMD_COMPLETE)
     {
         cmd_count++;
-        printf("[PREFETCH] 命令 %d: start=%d, len=%d, func_len=%d -> ",
-               cmd_count, prefetch.cmd_start, prefetch.cmd_len, prefetch.func_len);
+        printf("[SCAN] 命令 %d: start=%d, len=%d, func_len=%d -> ",
+               cmd_count, entry.cmd_start, entry.cmd_len, entry.func_len);
 
         /* 输出函数名 */
-        for (uint8_t i = 0; i < prefetch.func_len; i++)
-            putchar(prefetch.buf[prefetch.cmd_start + i]);
+        for (uint8_t i = 0; i < entry.func_len; i++)
+            putchar(entry.buf[entry.cmd_start + i]);
         printf("\r\n");
     }
 
-    printf("[PREFETCH] 共预解析 %d 条命令\r\n\r\n", cmd_count);
+    printf("[SCAN] 共预解析 %d 条命令\r\n\r\n", cmd_count);
 }
 
 int main(void)
 {
-    printf("CMD SCAN 零拷贝状态机解析器示例\r\n");
+    printf("CMD 零拷贝命令解析器示例\r\n");
     printf("================================\r\n\r\n");
     
     /* 注册函数组（用于 dyncall） */
@@ -331,7 +331,7 @@ int main(void)
     demo_single_command();
     demo_multi_command();
     demo_incremental_receive();
-    demo_prefetch();
+    demo_entry();
     demo_zero_copy();
     demo_format_comparison();
     

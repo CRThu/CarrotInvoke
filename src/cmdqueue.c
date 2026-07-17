@@ -18,32 +18,32 @@ void cmd_queue_init(cmd_queue_t* queue)
     queue->count = 0;
 }
 
-dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_prefetch_t* prefetch)
+dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_entry_t* entry)
 {
-    if (queue == NULL || prefetch == NULL)
+    if (queue == NULL || entry == NULL)
         return DYNCALL_ERR_NULL_OBJECT;
 
-    if (prefetch->cmd_len == 0)
+    if (entry->cmd_len == 0)
         return DYNCALL_ERR_NULL_OBJECT;
 
     if (queue->count >= CMD_QUEUE_SIZE)
         return DYNCALL_ERR_POOL;
 
-    if (ringbuf_writable(&queue->ring) < prefetch->cmd_len)
+    if (ringbuf_writable(&queue->ring) < entry->cmd_len)
         return DYNCALL_ERR_POOL;
 
-    const uint8_t* src = (const uint8_t*)&prefetch->buf[prefetch->cmd_start];
-    uint16_t written = ringbuf_write(&queue->ring, src, prefetch->cmd_len);
+    const uint8_t* src = (const uint8_t*)&entry->buf[entry->cmd_start];
+    uint16_t written = ringbuf_write(&queue->ring, src, entry->cmd_len);
 
-    if (written != prefetch->cmd_len)
+    if (written != entry->cmd_len)
         return DYNCALL_ERR_POOL;
 
-    cmd_prefetch_t* item = &queue->items[queue->tail];
+    cmd_entry_t* item = &queue->items[queue->tail];
     item->buf = queue->ring.buf;
     item->buf_len = CMD_QUEUE_BUF_SIZE;
-    item->cmd_start = (queue->ring.head - prefetch->cmd_len + CMD_QUEUE_BUF_SIZE) % CMD_QUEUE_BUF_SIZE;
-    item->cmd_len = prefetch->cmd_len;
-    item->func_len = prefetch->func_len;
+    item->cmd_start = (queue->ring.head - entry->cmd_len + CMD_QUEUE_BUF_SIZE) % CMD_QUEUE_BUF_SIZE;
+    item->cmd_len = entry->cmd_len;
+    item->func_len = entry->func_len;
 
     queue->tail = (queue->tail + 1) % CMD_QUEUE_SIZE;
     queue->count++;
@@ -51,16 +51,16 @@ dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_prefetch_t* prefetch)
     return DYNCALL_NO_ERROR;
 }
 
-dyncall_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_prefetch_t* prefetch)
+dyncall_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_entry_t* entry)
 {
-    if (queue == NULL || prefetch == NULL)
+    if (queue == NULL || entry == NULL)
         return DYNCALL_ERR_NULL_OBJECT;
 
     if (queue->count == 0)
         return DYNCALL_ERR_POOL;
 
-    cmd_prefetch_t* item = &queue->items[queue->head];
-    *prefetch = *item;
+    cmd_entry_t* item = &queue->items[queue->head];
+    *entry = *item;
 
     ringbuf_skip(&queue->ring, item->cmd_len);
 
@@ -106,7 +106,7 @@ uint8_t cmd_queue_check(cmd_queue_t* queue, const char* func_name)
 
     for (uint8_t i = 0; i < queue->count; i++)
     {
-        cmd_prefetch_t* item = &queue->items[idx];
+        cmd_entry_t* item = &queue->items[idx];
 
         if (item->func_len > 0)
         {

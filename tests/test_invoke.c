@@ -2,8 +2,8 @@
  * test_invoke.c — Unit tests + E2E pipeline tests for invoke module
  *
  * Tests the complete new pipeline:
- *   DMA buffer → cmdscan_prefetch → cmd_queue_push → cmd_queue_pop
- *   → cmdparse_args → dispatch_find → invoke_call
+ *   DMA buffer → cmd_scan → cmd_queue_push → cmd_queue_pop
+ *   → cmd_parse → dispatch_find → invoke_call
  */
 #include "unity.h"
 #include "test_invoke_helpers.h"
@@ -24,24 +24,24 @@ static void invoke_setUp(void)
 static dispatch_status_t run_pipeline(const char* buf, uint16_t len)
 {
     cmd_scanner_t scanner;
-    cmdscan_init(&scanner, (const uint8_t*)buf, len);
+    cmd_init(&scanner, (const uint8_t*)buf, len);
 
     cmd_queue_t queue;
     cmd_queue_init(&queue);
 
-    cmd_prefetch_t pf;
-    while (cmdscan_prefetch(&scanner, &pf) == SCAN_COMPLETE)
+    cmd_entry_t entry;
+    while (cmd_scan(&scanner, &entry) == CMD_COMPLETE)
     {
-        cmd_queue_push(&queue, &pf);
+        cmd_queue_push(&queue, &entry);
     }
 
     dispatch_status_t last_status = DISPATCH_OK;
     while (!cmd_queue_is_empty(&queue))
     {
-        cmd_queue_pop(&queue, &pf);
+        cmd_queue_pop(&queue, &entry);
 
-        cmd_parse_result_t result;
-        cmdparse_args((const char*)pf.buf + pf.cmd_start, pf.cmd_len, &result);
+        cmd_args_t result;
+        cmd_parse((const char*)entry.buf + entry.cmd_start, entry.cmd_len, &result);
 
         last_status = invoke_call(&invoke_dispatcher, &result, NULL);
     }
@@ -63,7 +63,7 @@ void test_icall_null_result(void)
 void test_icall_null_func_name(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     dispatch_status_t s = invoke_call(&invoke_dispatcher, &result, NULL);
     TEST_ASSERT_EQUAL_INT(DISPATCH_ERR_NULL, s);
@@ -72,7 +72,7 @@ void test_icall_null_func_name(void)
 void test_icall_func_not_found(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "nonexistent";
     result.func_name_len = strlen("nonexistent");
@@ -87,7 +87,7 @@ void test_icall_func_not_found(void)
 void test_icall_hello(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "hello";
     result.func_name_len = 5;
@@ -105,7 +105,7 @@ void test_icall_hello(void)
 void test_icall_dec_positive(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "dec";
     result.func_name_len = 3;
@@ -125,7 +125,7 @@ void test_icall_dec_positive(void)
 void test_icall_dec_negative(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "dec";
     result.func_name_len = 3;
@@ -142,7 +142,7 @@ void test_icall_dec_negative(void)
 void test_icall_dec_zero(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "dec";
     result.func_name_len = 3;
@@ -163,7 +163,7 @@ void test_icall_dec_zero(void)
 void test_icall_hex_basic(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "hex";
     result.func_name_len = 3;
@@ -180,7 +180,7 @@ void test_icall_hex_basic(void)
 void test_icall_hex_with_prefix(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "hex";
     result.func_name_len = 3;
@@ -201,7 +201,7 @@ void test_icall_hex_with_prefix(void)
 void test_icall_string_basic(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "str";
     result.func_name_len = 3;
@@ -224,7 +224,7 @@ void test_icall_string_basic(void)
 void test_icall_add(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "add";
     result.func_name_len = 3;
@@ -252,7 +252,7 @@ void test_icall_add(void)
 void test_icall_3strings(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "args";
     result.func_name_len = 4;
@@ -283,7 +283,7 @@ void test_icall_3strings(void)
 void test_icall_arg_mismatch_too_many(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "hello";  /* 0 args expected */
     result.func_name_len = 5;
@@ -299,7 +299,7 @@ void test_icall_arg_mismatch_too_many(void)
 void test_icall_arg_mismatch_too_few(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "add";  /* 2 args expected */
     result.func_name_len = 3;
@@ -319,7 +319,7 @@ void test_icall_arg_mismatch_too_few(void)
 void test_icall_ret_none(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "hello";
     result.func_name_len = 5;
@@ -335,7 +335,7 @@ void test_icall_ret_none(void)
 void test_icall_ret_i64(void)
 {
     invoke_setUp();
-    cmd_parse_result_t result;
+    cmd_args_t result;
     memset(&result, 0, sizeof(result));
     result.func_name = "add";
     result.func_name_len = 3;

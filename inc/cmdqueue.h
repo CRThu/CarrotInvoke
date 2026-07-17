@@ -29,7 +29,7 @@ extern "C"
 /* 命令队列 */
 typedef struct
 {
-    cmd_prefetch_t items[CMD_QUEUE_SIZE];
+    cmd_entry_t items[CMD_QUEUE_SIZE];
     ringbuf_t ring;             /* 环形缓冲区（管理命令数据） */
     uint8_t head;               /* 队头索引 */
     uint8_t tail;               /* 队尾索引 */
@@ -44,18 +44,18 @@ void cmd_queue_init(cmd_queue_t* queue);
 /**
  * @brief 命令入队（复制原始命令到 buf）
  * @param queue 队列指针
- * @param prefetch 预解析结果（来自 cmdscan_prefetch）
+ * @param entry 命令条目（来自 cmd_scan）
  * @return DYNCALL_NO_ERROR 成功，其他错误码
  */
-dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_prefetch_t* prefetch);
+dyncall_status_t cmd_queue_push(cmd_queue_t* queue, cmd_entry_t* entry);
 
 /**
  * @brief 命令出队
  * @param queue 队列指针
- * @param prefetch 输出：预解析结果（cmd 指向 queue 内部 buf）
+ * @param entry 输出：命令条目（buf 指向 queue 内部 buf）
  * @return DYNCALL_NO_ERROR 成功，DYNCALL_ERR_POOL 队列空
  */
-dyncall_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_prefetch_t* prefetch);
+dyncall_status_t cmd_queue_pop(cmd_queue_t* queue, cmd_entry_t* entry);
 
 /**
  * @brief 检查队列是否为空

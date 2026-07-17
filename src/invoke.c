@@ -2,7 +2,7 @@
  * INVOKE v2 - 调度执行引擎
  * CarrotRPC
  *
- * prefetch → queue → cmdparse_args → dispatch_find → invoke_call
+ * cmd_scan → queue → cmd_parse → dispatch_find → invoke_call
  *****************************/
 #include "invoke.h"
 #include <string.h>
@@ -65,7 +65,7 @@ static invoke_ret_type_t resolve_ret_type(uint8_t ret_type)
  * 公开 API
  *=============================================================*/
 dispatch_status_t invoke_call(dispatch_registry_t* reg,
-                              cmd_parse_result_t* result, invoke_ret_t* ret)
+                              cmd_args_t* result, invoke_ret_t* ret)
 {
     if (result == NULL || result->func_name == NULL || result->func_name_len == 0)
     {

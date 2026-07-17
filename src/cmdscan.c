@@ -1,5 +1,5 @@
 /****************************
-* CMD SCAN - 零拷贝命令解析器
+* CMD - 零拷贝命令解析器
 * CRTHu
 * 2025.07.15
 *****************************/
@@ -53,7 +53,7 @@ static inline int8_t is_separator(char c)
  * 扫描器 API
  *=============================================================*/
 
-void cmdscan_init(cmd_scanner_t* scanner, const uint8_t* buf, uint16_t buf_size)
+void cmd_init(cmd_scanner_t* scanner, const uint8_t* buf, uint16_t buf_size)
 {
     if (scanner == NULL) return;
 
@@ -62,23 +62,23 @@ void cmdscan_init(cmd_scanner_t* scanner, const uint8_t* buf, uint16_t buf_size)
     scanner->scan_pos = 0;
 }
 
-void cmdscan_reset(cmd_scanner_t* scanner)
+void cmd_reset(cmd_scanner_t* scanner)
 {
     if (scanner == NULL) return;
 
     scanner->scan_pos = 0;
 }
 
-scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
+cmd_status_t cmd_scan(cmd_scanner_t* scanner, cmd_entry_t* entry)
 {
-    if (scanner == NULL || prefetch == NULL || scanner->buf == NULL)
-        return SCAN_ERROR;
+    if (scanner == NULL || entry == NULL || scanner->buf == NULL)
+        return CMD_ERROR;
 
-    prefetch->buf = scanner->buf;
-    prefetch->buf_len = scanner->buf_size;
-    prefetch->cmd_start = 0;
-    prefetch->cmd_len = 0;
-    prefetch->func_len = 0;
+    entry->buf = scanner->buf;
+    entry->buf_len = scanner->buf_size;
+    entry->cmd_start = 0;
+    entry->cmd_len = 0;
+    entry->func_len = 0;
 
     /* 跳过前导空白和终止符 */
     while (scanner->scan_pos < scanner->buf_size)
@@ -96,7 +96,7 @@ scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
 
     if (scanner->scan_pos >= scanner->buf_size)
     {
-        return SCAN_INCOMPLETE;
+        return CMD_INCOMPLETE;
     }
 
     uint16_t cmd_start = scanner->scan_pos;
@@ -109,18 +109,18 @@ scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
         if (is_terminator(c) || is_separator(c))
         {
             /* 遇到终止符或分隔符，命令结束 */
-            prefetch->cmd_start = cmd_start;
-            prefetch->cmd_len = scanner->scan_pos - cmd_start;
-            prefetch->func_len = prefetch->cmd_len;
+            entry->cmd_start = cmd_start;
+            entry->cmd_len = scanner->scan_pos - cmd_start;
+            entry->func_len = entry->cmd_len;
             scanner->scan_pos++; /* 跳过终止符/分隔符 */
-            return SCAN_COMPLETE;
+            return CMD_COMPLETE;
         }
 
         if (is_left_bracket(c))
         {
             /* 遇到左括号，函数名结束 */
-            prefetch->cmd_start = cmd_start;
-            prefetch->func_len = scanner->scan_pos - cmd_start;
+            entry->cmd_start = cmd_start;
+            entry->func_len = scanner->scan_pos - cmd_start;
 
             /* 扫描到右括号或终止符 */
             scanner->scan_pos++; /* 跳过左括号 */
@@ -129,9 +129,9 @@ scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
                 c = (char)scanner->buf[scanner->scan_pos];
                 if (is_terminator(c))
                 {
-                    prefetch->cmd_len = scanner->scan_pos - cmd_start;
+                    entry->cmd_len = scanner->scan_pos - cmd_start;
                     scanner->scan_pos++; /* 跳过终止符 */
-                    return SCAN_COMPLETE;
+                    return CMD_COMPLETE;
                 }
                 if (is_right_bracket(c))
                 {
@@ -141,23 +141,23 @@ scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
                            !is_terminator((char)scanner->buf[scanner->scan_pos]) &&
                            !is_separator((char)scanner->buf[scanner->scan_pos]))
                         scanner->scan_pos++;
-                    prefetch->cmd_len = scanner->scan_pos - cmd_start;
+                    entry->cmd_len = scanner->scan_pos - cmd_start;
                     if (scanner->scan_pos < scanner->buf_size)
                         scanner->scan_pos++; /* 跳过终止符/分隔符 */
-                    return SCAN_COMPLETE;
+                    return CMD_COMPLETE;
                 }
                 scanner->scan_pos++;
             }
             /* 缓冲区结束，未找到终止符 */
-            prefetch->cmd_len = scanner->scan_pos - cmd_start;
-            return SCAN_INCOMPLETE;
+            entry->cmd_len = scanner->scan_pos - cmd_start;
+            return CMD_INCOMPLETE;
         }
 
         if (is_space(c))
         {
             /* 遇到空白，函数名结束，无括号形式 */
-            prefetch->cmd_start = cmd_start;
-            prefetch->func_len = scanner->scan_pos - cmd_start;
+            entry->cmd_start = cmd_start;
+            entry->func_len = scanner->scan_pos - cmd_start;
 
             /* 继续扫描到终止符、分隔符或缓冲区结束 */
             while (scanner->scan_pos < scanner->buf_size &&
@@ -165,21 +165,21 @@ scan_status_t cmdscan_prefetch(cmd_scanner_t* scanner, cmd_prefetch_t* prefetch)
                    !is_separator((char)scanner->buf[scanner->scan_pos]))
                 scanner->scan_pos++;
 
-            prefetch->cmd_len = scanner->scan_pos - cmd_start;
+            entry->cmd_len = scanner->scan_pos - cmd_start;
             if (scanner->scan_pos < scanner->buf_size)
                 scanner->scan_pos++; /* 跳过终止符/分隔符 */
-            return SCAN_COMPLETE;
+            return CMD_COMPLETE;
         }
 
         scanner->scan_pos++;
     }
 
     /* 缓冲区结束，未找到终止符 - 命令本身完整 */
-    prefetch->cmd_start = cmd_start;
-    prefetch->cmd_len = scanner->scan_pos - cmd_start;
-    if (prefetch->func_len == 0)
-        prefetch->func_len = prefetch->cmd_len;
-    return SCAN_COMPLETE;
+    entry->cmd_start = cmd_start;
+    entry->cmd_len = scanner->scan_pos - cmd_start;
+    if (entry->func_len == 0)
+        entry->func_len = entry->cmd_len;
+    return CMD_COMPLETE;
 }
 
 /*=============================================================
@@ -245,15 +245,15 @@ static void trim_token(const char* p, uint16_t len,
     *trim_len = j - i;
 }
 
-uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
+uint8_t cmd_parse(const char* cmd, uint16_t len, cmd_args_t* args)
 {
-    if (cmd == NULL || result == NULL || len == 0)
+    if (cmd == NULL || args == NULL || len == 0)
         return 0xFF; /* 错误 */
 
     /* 清空结果 */
-    result->func_name = NULL;
-    result->func_name_len = 0;
-    result->args_count = 0;
+    args->func_name = NULL;
+    args->func_name_len = 0;
+    args->args_count = 0;
 
     uint16_t pos = 0;
 
@@ -270,8 +270,8 @@ uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
     if (pos == name_start)
         return 0xFF; /* 没有函数名 */
 
-    result->func_name = cmd + name_start;
-    result->func_name_len = pos - name_start;
+    args->func_name = cmd + name_start;
+    args->func_name_len = pos - name_start;
 
     /* 3. 跳过函数名后的空白 */
     skip_space(cmd, len, &pos);
@@ -285,7 +285,7 @@ uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
             /* 有参数，解析空格分隔的参数 */
             uint8_t arg_idx = 0;
 
-            while (pos < len && arg_idx < CMD_SCAN_MAX_ARGS)
+            while (pos < len && arg_idx < CMD_MAX_ARGS)
             {
                 /* 跳过参数前空白 */
                 skip_space(cmd, len, &pos);
@@ -308,8 +308,8 @@ uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
 
                     if (token_length > 0)
                     {
-                        result->args[arg_idx].ptr = token_start;
-                        result->args[arg_idx].len = token_length;
+                        args->args[arg_idx].ptr = token_start;
+                        args->args[arg_idx].len = token_length;
                         arg_idx++;
                     }
                 }
@@ -323,7 +323,7 @@ uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
                 }
             }
 
-            result->args_count = arg_idx;
+            args->args_count = arg_idx;
             return arg_idx;
         }
 
@@ -336,7 +336,7 @@ uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
     /* 5. 解析参数 */
     uint8_t arg_idx = 0;
 
-    while (pos < len && arg_idx < CMD_SCAN_MAX_ARGS)
+    while (pos < len && arg_idx < CMD_MAX_ARGS)
     {
         /* 跳过参数前空白 */
         skip_space(cmd, len, &pos);
@@ -365,8 +365,8 @@ uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
 
             if (token_length > 0)
             {
-                result->args[arg_idx].ptr = token_start;
-                result->args[arg_idx].len = token_length;
+                args->args[arg_idx].ptr = token_start;
+                args->args[arg_idx].len = token_length;
                 arg_idx++;
             }
         }
@@ -380,6 +380,6 @@ uint8_t cmdparse_args(const char* cmd, uint16_t len, cmd_parse_result_t* result)
         }
     }
 
-    result->args_count = arg_idx;
+    args->args_count = arg_idx;
     return arg_idx;
 }
